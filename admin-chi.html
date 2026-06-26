@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="vi" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Blue Ocean — Điều khiển</title>
+
+  <!-- Fonts: Inter, sharp grotesk sans with strong heavy weights for big numbers -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS via CDN + shared design system (FLAT, solid colors, no gradients) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            primary: '#2563eb', // blue-600
+            alert: '#dc2626',   // red-600
+            surface: '#0f172a', // slate-900
+          },
+        },
+      },
+    };
+  </script>
+
+  <link rel="stylesheet" href="./style.css" />
+
+  <!-- Firebase Realtime Database (compat SDK so `firebase` is global, no bundler) -->
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+  <!-- Global state + Firebase wiring (runs after the SDKs above) -->
+  <script defer src="./app.js"></script>
+</head>
+
+<!-- ADMIN VIEW · dense functional control panel (host only). Flat white. -->
+<body class="h-full min-h-[100dvh] bg-white font-sans text-slate-900 antialiased">
+  <main class="mx-auto max-w-7xl p-6">
+
+    <!-- Header -->
+    <header class="mb-6 flex items-center justify-between border-b-2 border-slate-200 pb-4">
+      <div>
+        <h1 class="text-2xl font-black uppercase tracking-tight">Blue Ocean · Điều khiển</h1>
+        <p class="mt-1 text-sm font-bold uppercase tracking-widest text-slate-500">
+          PHASE: <span id="cur-phase" class="text-blue-600">—</span>
+        </p>
+      </div>
+      <button id="btn-reset"
+              class="rounded-md bg-slate-800 px-5 py-3 text-sm font-black uppercase tracking-widest text-white">
+        Reset
+      </button>
+    </header>
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+
+      <!-- 1 · PHASE NAVIGATION -->
+      <section class="rounded-md border-2 border-slate-200 p-5">
+        <h2 class="mb-4 text-base font-black uppercase tracking-widest text-slate-700">1 · Phase</h2>
+        <div id="phase-nav" class="grid grid-cols-5 gap-2"></div>
+        <div class="mt-4 grid grid-cols-3 gap-2">
+          <button data-action="calc"
+                  class="col-span-1 rounded-md bg-blue-600 px-3 py-3 text-xs font-black uppercase tracking-wide text-white">
+            Tính KQ Blue Ocean
+          </button>
+          <button data-action="resolve"
+                  class="col-span-1 rounded-md bg-red-600 px-3 py-3 text-xs font-black uppercase tracking-wide text-white">
+            Giải sinh tử
+          </button>
+          <div class="col-span-1 grid place-items-center rounded-md bg-slate-100 px-3 text-xs font-bold uppercase text-slate-500">
+            <span id="action-out">—</span>
+          </div>
+        </div>
+        <!-- Admin-controlled input lock: stops players tapping during the talk. -->
+        <button id="btn-lock"
+                class="mt-2 w-full rounded-md bg-slate-800 py-3 text-sm font-black uppercase tracking-widest text-white">
+          🔓 Khóa chọn đáp án
+        </button>
+      </section>
+
+      <!-- 3 · QUIZ CONTROLLER -->
+      <section class="rounded-md border-2 border-slate-200 p-5">
+        <h2 class="mb-4 text-base font-black uppercase tracking-widest text-slate-700">3 · Quiz · 30/20/10/5</h2>
+        <p class="mb-2 text-xs font-bold uppercase tracking-widest text-slate-500">Đáp án đúng (tuỳ chọn)</p>
+        <div id="answer-key" class="mb-4 grid grid-cols-5 gap-2"></div>
+        <button id="btn-reveal"
+                class="w-full rounded-md bg-emerald-600 py-4 text-lg font-black uppercase tracking-widest text-white">
+          Hiện đáp án
+        </button>
+        <p class="mt-2 text-xs font-semibold text-slate-500">
+          Xếp theo timestamp: nhanh nhất +30, rồi 20, 10, 5. Để trống đáp án = chấm theo tốc độ cho mọi đội đã trả lời.
+        </p>
+      </section>
+
+      <!-- 2 · MANUAL SCORE ADJUSTERS -->
+      <section class="rounded-md border-2 border-slate-200 p-5 lg:col-span-2">
+        <h2 class="mb-4 text-base font-black uppercase tracking-widest text-slate-700">2 · Chấm điểm thủ công</h2>
+        <div id="score-blocks" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"></div>
+      </section>
+
+      <!-- 4 · CHEAT VIEW -->
+      <section class="rounded-md border-2 border-slate-200 p-5 lg:col-span-2">
+        <h2 class="mb-4 text-base font-black uppercase tracking-widest text-slate-700">4 · Dữ liệu trực tiếp</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead>
+              <tr class="border-b-2 border-slate-200 text-xs font-black uppercase tracking-wider text-slate-500">
+                <th class="py-2 pr-4">Đội</th>
+                <th class="py-2 pr-4">Tên</th>
+                <th class="py-2 pr-4">Điểm</th>
+                <th class="py-2 pr-4">Đáp án</th>
+                <th class="py-2 pr-4">Thị trường</th>
+                <th class="py-2 pr-4">Bid</th>
+                <th class="py-2 pr-4">Timestamp</th>
+              </tr>
+            </thead>
+            <tbody id="cheat-rows" class="tabular font-semibold"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const { store, admin, PHASES, TEAM_IDS, TEAM_META, formatNumber } = window.BlueOcean;
+
+      let stateCache = {};
+      let teamsCache = {};
+      let answerKey = null; // selected correct answer for the quiz reveal
+
+      const out = (msg) => { document.getElementById('action-out').textContent = msg; };
+      const run = async (fn) => {
+        try { const r = await fn(); out('OK'); return r; }
+        catch (e) { out(e.message || 'LỖI'); console.error(e); }
+      };
+
+      /* ── 1 · PHASE NAVIGATION ──────────────────────────────────────────── */
+      const PHASE_BUTTONS = [
+        { key: 'LOBBY', label: 'Lobby' },
+        { key: 'ACCUMULATION', label: 'Tích luỹ' },
+        { key: 'BLUE_OCEAN', label: 'Blue Ocean' },
+        { key: 'SUDDEN_DEATH', label: 'Sinh tử' },
+        { key: 'VICTORY', label: 'Vô địch' },
+      ];
+      const phaseNav = document.getElementById('phase-nav');
+      phaseNav.innerHTML = PHASE_BUTTONS.map((p) => `
+        <button data-phase="${PHASES[p.key]}"
+          class="rounded-md bg-slate-800 px-2 py-3 text-xs font-black uppercase tracking-wide text-white">
+          ${p.label}</button>`).join('');
+      phaseNav.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-phase]');
+        if (btn) run(() => admin.changePhase(btn.dataset.phase));
+      });
+
+      document.querySelector('[data-action="calc"]').addEventListener('click', () =>
+        run(() => admin.calculateBlueOceanResult()));
+      document.querySelector('[data-action="resolve"]').addEventListener('click', () =>
+        run(() => admin.resolveSuddenDeath()));
+      document.getElementById('btn-reset').addEventListener('click', () => {
+        if (confirm('Reset toàn bộ ván chơi?')) run(() => store.resetGame());
+      });
+
+      // Admin lock: freeze / unfreeze player input (quiz, market, bid).
+      document.getElementById('btn-lock').addEventListener('click', () =>
+        run(() => admin.setLock(stateCache.locked !== true)));
+
+      /* ── 2 · SCORE ADJUSTERS ───────────────────────────────────────────── */
+      const scoreBlocks = document.getElementById('score-blocks');
+      scoreBlocks.innerHTML = TEAM_IDS.map((id) => `
+        <div class="rounded-md border-2 border-slate-200 p-4" data-block="${id}">
+          <div class="mb-3 flex items-center gap-2">
+            <span class="h-4 w-4 rounded-sm ${TEAM_META[id].bg}"></span>
+            <span class="text-sm font-black uppercase tracking-wide" data-name>${TEAM_META[id].label}</span>
+          </div>
+          <p class="mb-3 text-3xl font-black tabular" data-score>0 TỶ</p>
+          <button data-quick="${id}"
+            class="mb-2 w-full rounded-md bg-blue-600 py-3 text-sm font-black uppercase tracking-widest text-white">
+            +2 TỶ
+          </button>
+          <div class="flex gap-2">
+            <input type="number" data-amt="${id}" placeholder="±"
+              class="w-full rounded-md border-2 border-slate-300 px-3 py-2 text-center text-lg font-black tabular outline-none focus:border-blue-600" />
+            <button data-add="${id}"
+              class="rounded-md bg-slate-800 px-4 py-2 text-sm font-black uppercase text-white">Cộng</button>
+          </div>
+        </div>`).join('');
+
+      scoreBlocks.addEventListener('click', (e) => {
+        const quick = e.target.closest('[data-quick]');
+        if (quick) { run(() => admin.updateScore(quick.dataset.quick, 2)); return; }
+        const add = e.target.closest('[data-add]');
+        if (add) {
+          const id = add.dataset.add;
+          const input = scoreBlocks.querySelector(`[data-amt="${id}"]`);
+          const amt = Number(input.value);
+          if (!Number.isNaN(amt) && amt !== 0) {
+            run(() => admin.updateScore(id, amt)).then(() => { input.value = ''; });
+          }
+        }
+      });
+
+      /* ── 3 · QUIZ CONTROLLER ───────────────────────────────────────────── */
+      const answerKeyWrap = document.getElementById('answer-key');
+      const renderAnswerKey = () => {
+        answerKeyWrap.innerHTML = ['A', 'B', 'C', 'D'].map((opt) => `
+          <button data-key="${opt}"
+            class="rounded-md py-3 text-lg font-black uppercase text-white ${answerKey === opt ? 'bg-emerald-600' : 'bg-slate-800'}">
+            ${opt}</button>`).join('')
+          + `<button data-key="" class="rounded-md py-3 text-xs font-black uppercase text-white ${answerKey === null ? 'bg-emerald-600' : 'bg-slate-800'}">Tất cả</button>`;
+      };
+      renderAnswerKey();
+      answerKeyWrap.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-key]');
+        if (!btn) return;
+        answerKey = btn.dataset.key === '' ? null : btn.dataset.key;
+        renderAnswerKey();
+      });
+
+      // Bind reveal to app.js updateScore: rank answered teams by timestamp → 30/20/10/5.
+      // Award 30/20/10/5 by speed AND flag every team correct/wrong so their
+      // phone flashes the ✓ / ✗ effect (handled inside admin.revealQuiz).
+      document.getElementById('btn-reveal').addEventListener('click', () => run(async () => {
+        const { rewarded } = await admin.revealQuiz(answerKey);
+        return rewarded.length;
+      }));
+
+      /* ── 4 · CHEAT VIEW + live state ───────────────────────────────────── */
+      const cheatRows = document.getElementById('cheat-rows');
+      const render = () => {
+        document.getElementById('cur-phase').textContent = stateCache.currentPhase || '—';
+
+        // Reflect the input-lock state on the toggle.
+        const locked = stateCache.locked === true;
+        const lockBtn = document.getElementById('btn-lock');
+        lockBtn.textContent = locked ? '🔒 Mở khóa chọn đáp án' : '🔓 Khóa chọn đáp án';
+        lockBtn.classList.toggle('bg-red-600', locked);
+        lockBtn.classList.toggle('bg-slate-800', !locked);
+
+        // Update score-block headers.
+        TEAM_IDS.forEach((id) => {
+          const block = scoreBlocks.querySelector(`[data-block="${id}"]`);
+          if (!block) return;
+          const t = teamsCache[id] || {};
+          block.querySelector('[data-name]').textContent = t.name || TEAM_META[id].label;
+          block.querySelector('[data-score]').textContent = `${formatNumber(t.score || 0)} TỶ`;
+        });
+
+        // Cheat table.
+        const contenders = Array.isArray(stateCache.suddenDeathTeams) ? stateCache.suddenDeathTeams : [];
+        cheatRows.innerHTML = TEAM_IDS.map((id) => {
+          const t = teamsCache[id] || {};
+          const isWinner = stateCache.winner === id;
+          const isContender = contenders.includes(id);
+          const rowClass = isWinner ? 'bg-emerald-50' : (isContender ? 'bg-red-50' : '');
+          return `
+            <tr class="border-b border-slate-100 ${rowClass}">
+              <td class="py-2 pr-4"><span class="inline-block h-3 w-3 rounded-sm ${TEAM_META[id].bg} align-middle"></span> ${TEAM_META[id].label}</td>
+              <td class="py-2 pr-4">${t.name || '—'}</td>
+              <td class="py-2 pr-4 font-black">${formatNumber(t.score || 0)}</td>
+              <td class="py-2 pr-4">${t.answer || '—'}</td>
+              <td class="py-2 pr-4">${t.choice || '—'}</td>
+              <td class="py-2 pr-4">${t.bidAmount != null ? formatNumber(t.bidAmount) : '—'}</td>
+              <td class="py-2 pr-4 text-xs text-slate-400">${t.timestamp || '—'}</td>
+            </tr>`;
+        }).join('');
+      };
+
+      store.onState((s) => { stateCache = s; render(); });
+      store.onTeams((t) => { teamsCache = t; render(); });
+    });
+  </script>
+</body>
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyB1Ro80kcqN0aslYjE_GoyX83rsQ6afmr0",
+    authDomain: "khoinghiep-195e5.firebaseapp.com",
+    projectId: "khoinghiep-195e5",
+    storageBucket: "khoinghiep-195e5.firebasestorage.app",
+    messagingSenderId: "798906263634",
+    appId: "1:798906263634:web:557b317293fb93130f178b",
+    measurementId: "G-4V539HF2X4"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
+</html>

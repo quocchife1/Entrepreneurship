@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="vi" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#060f24" />
+  <title>Blue Ocean — Màn chiếu</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+        colors: { primary: '#2563eb', alert: '#dc2626', surface: '#0f172a' } } },
+    };
+  </script>
+
+  <link rel="stylesheet" href="./style.css" />
+
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script defer src="./app.js"></script>
+</head>
+
+<!-- HOST VIEW · cinematic big screen. Ocean motion behind; screens react to phase. -->
+<body class="ocean-bg relative h-full min-h-[100dvh] overflow-hidden font-sans text-white antialiased">
+
+  <!-- ── AMBIENT OCEAN (behind everything) ────────────────────────────────── -->
+  <div class="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+    <div id="bubbles" class="absolute inset-0"></div>
+    <svg class="wave-layer wave-3" viewBox="0 0 2880 320" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,160 C360,60 1080,260 1440,160 C1800,60 2520,260 2880,160 L2880,320 L0,320 Z" fill="#1d4ed8" />
+    </svg>
+    <svg class="wave-layer wave-2" viewBox="0 0 2880 320" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,160 C360,60 1080,260 1440,160 C1800,60 2520,260 2880,160 L2880,320 L0,320 Z" fill="#2563eb" />
+    </svg>
+    <svg class="wave-layer wave-1" viewBox="0 0 2880 320" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,160 C360,60 1080,260 1440,160 C1800,60 2520,260 2880,160 L2880,320 L0,320 Z" fill="#38bdf8" />
+    </svg>
+  </div>
+
+  <!-- ── SCREEN: LOBBY (PHASE_0) ──────────────────────────────────────────── -->
+  <section id="screen-lobby" class="screen absolute inset-0 z-10 flex-col items-center justify-center gap-10 p-16">
+    <p class="text-base font-bold uppercase tracking-[0.6em] text-sky-300">Presentation Game</p>
+    <h1 class="glow-pulse float text-center text-[9rem] font-black uppercase leading-none tracking-tighter text-white">Blue Ocean</h1>
+    <p class="text-2xl font-bold uppercase tracking-[0.4em] text-sky-200/70">Chiến lược đại dương xanh</p>
+
+    <div class="flex items-center gap-16">
+      <div class="flex flex-col items-center gap-4">
+        <div class="shimmer grid h-64 w-64 place-items-center rounded-2xl border-4 border-sky-400/40 bg-white">
+          <span class="text-3xl font-black tracking-widest text-slate-900">QR</span>
+        </div>
+        <p class="text-base font-semibold uppercase tracking-[0.3em] text-sky-200/70">Quét để tham gia</p>
+      </div>
+
+      <div class="flex flex-col gap-5">
+        <div id="lobby-slots" class="grid grid-cols-2 gap-4"></div>
+        <p class="text-center text-3xl font-black uppercase tracking-wide">
+          <span id="lobby-ready" class="tabular glow-pulse text-5xl text-emerald-400">0</span>
+          <span class="text-sky-200/70"> / 4 sẵn sàng</span>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SCREEN: LEADERBOARD (PHASE_1 / PHASE_3_CHECK) ────────────────────── -->
+  <section id="screen-leaderboard" class="screen absolute inset-0 z-10 flex-col p-14">
+    <div class="mb-6 flex items-center gap-4">
+      <span class="h-10 w-2 rounded-full bg-sky-400"></span>
+      <h2 class="text-6xl font-black uppercase tracking-tight">Bảng tài sản</h2>
+    </div>
+    <div id="board" class="grid flex-1 grid-cols-4 items-end gap-10 pb-8"></div>
+  </section>
+
+  <!-- ── SCREEN: MARKET (PHASE_2) ─────────────────────────────────────────── -->
+  <section id="screen-market" class="screen absolute inset-0 z-10 flex-col items-center justify-center gap-14 p-16">
+    <div class="flex items-center gap-4">
+      <span class="h-12 w-2 rounded-full bg-sky-400"></span>
+      <h2 class="text-7xl font-black uppercase tracking-tight">Chọn thị trường</h2>
+    </div>
+    <div id="market-cards" class="grid w-full max-w-7xl grid-cols-3 gap-12"></div>
+  </section>
+
+  <!-- ── SCREEN: ALERT (PHASE_3) ──────────────────────────────────────────── -->
+  <section id="screen-alert" class="screen absolute inset-0 z-20 flex-col items-center justify-center gap-10 bg-red-700 p-16">
+    <svg class="anim-alert h-40 w-40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+    <p class="anim-crisis text-[8rem] font-black uppercase leading-none tracking-tighter text-white">Khủng hoảng</p>
+    <p class="text-6xl font-black uppercase tracking-tight text-white">Đấu thầu sinh tử</p>
+    <p id="alert-teams" class="text-4xl font-black uppercase tracking-[0.3em] text-red-100"></p>
+    <p id="alert-status" class="text-2xl font-bold uppercase tracking-[0.3em] text-red-200/70"></p>
+  </section>
+
+  <!-- ── SCREEN: VICTORY (PHASE_4) ────────────────────────────────────────── -->
+  <section id="screen-victory" class="screen absolute inset-0 z-20 flex-col items-center justify-center gap-8 p-16">
+    <div id="confetti" class="pointer-events-none absolute inset-0 overflow-hidden"></div>
+    <svg class="float h-44 w-44" viewBox="0 0 24 24" fill="#facc15" stroke="#facc15" stroke-width="1" stroke-linejoin="round">
+      <path d="M3 6l4 4 5-7 5 7 4-4-2 13H5L3 6z" />
+    </svg>
+    <p class="text-2xl font-bold uppercase tracking-[0.5em] text-amber-300">Nhà vô địch</p>
+    <p id="victory-name" class="glow-pulse text-center text-8xl font-black uppercase leading-none tracking-tighter text-white">—</p>
+    <p class="text-4xl font-black uppercase tracking-wide"><span id="victory-score" class="tabular text-amber-300">0</span> TỶ</p>
+
+    <!-- Sudden-death transparency: both teams' locked bids, revealed here. -->
+    <div id="victory-bids" style="display:none" class="mt-2 gap-8"></div>
+  </section>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const { store, PHASES, TEAM_IDS, TEAM_META, MARKETS, rankTeams, formatNumber } = window.BlueOcean;
+
+      // Solid team colors as hex (for SVG + bar fills).
+      const COLOR = { team1: '#2563eb', team2: '#059669', team3: '#f59e0b', team4: '#e11d48' };
+      const MARKET_ICON = {
+        A: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-16 w-16"><path d="M2 12s3-3 5-3 3 3 5 3 3-3 5-3 5 3 5 3"/><path d="M2 18s3-3 5-3 3 3 5 3 3-3 5-3 5 3 5 3"/></svg>',
+        B: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-16 w-16"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>',
+        C: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-16 w-16"><circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>',
+      };
+
+      let stateCache = {};
+      let teamsCache = {};
+
+      const showScreen = (id) => document.querySelectorAll('.screen').forEach((el) =>
+        el.classList.toggle('is-active', el.id === id));
+
+      /* ── count-up util ── */
+      const animateCount = (el, to) => {
+        to = Math.round(Number(to) || 0);
+        const cur = Number(el.dataset.val || '0');
+        if (cur === to) { el.textContent = to.toLocaleString('vi-VN'); return; }
+        el.dataset.val = to;
+        const from = cur;
+        const start = performance.now();
+        const dur = 800;
+        const step = (now) => {
+          const p = Math.min(1, (now - start) / dur);
+          const e = 1 - Math.pow(1 - p, 3);
+          el.textContent = Math.round(from + (to - from) * e).toLocaleString('vi-VN');
+          if (p < 1 && Number(el.dataset.val) === to) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      };
+
+      /* ── ambient bubbles ── */
+      const bubbleWrap = document.getElementById('bubbles');
+      for (let i = 0; i < 18; i += 1) {
+        const b = document.createElement('div');
+        b.className = 'bubble';
+        const size = 8 + Math.floor(Math.random() * 46);
+        b.style.width = `${size}px`;
+        b.style.height = `${size}px`;
+        b.style.left = `${Math.random() * 100}%`;
+        b.style.animationDuration = `${10 + Math.random() * 16}s`;
+        b.style.animationDelay = `${-Math.random() * 18}s`;
+        bubbleWrap.appendChild(b);
+      }
+
+      /* ── LOBBY ── */
+      const renderLobby = () => {
+        const slots = document.getElementById('lobby-slots');
+        slots.innerHTML = TEAM_IDS.map((id) => {
+          const t = teamsCache[id] || {};
+          const on = t.ready === true;
+          return `<div class="flex items-center gap-3 rounded-xl border-2 px-5 py-4 transition-all duration-300 ${on ? 'border-transparent badge-pop' : 'border-white/15'}"
+            style="${on ? `background:${COLOR[id]}` : 'background:rgba(255,255,255,0.04)'}">
+            <span class="grid h-9 w-9 place-items-center rounded-md text-sm font-black" style="background:rgba(255,255,255,0.18)">${on ? '✓' : '·'}</span>
+            <span class="text-2xl font-black uppercase tracking-wide ${on ? 'text-white' : 'text-white/40'}">${on && t.name ? t.name : TEAM_META[id].label}</span>
+          </div>`;
+        }).join('');
+        animateCount(document.getElementById('lobby-ready'), TEAM_IDS.filter((id) => teamsCache[id] && teamsCache[id].ready).length);
+      };
+
+      /* ── LEADERBOARD ── */
+      const board = document.getElementById('board');
+      const buildBoard = () => {
+        board.innerHTML = TEAM_IDS.map((id) => `
+          <div class="flex h-full flex-col items-center justify-end gap-4" data-col="${id}">
+            <div class="flex items-center gap-2">
+              <span class="rank grid h-9 w-9 place-items-center rounded-md bg-white/10 text-lg font-black">—</span>
+              <span class="crown text-3xl" style="visibility:hidden">👑</span>
+            </div>
+            <p class="tabular text-5xl font-black"><span class="score" data-val="0">0</span> <span class="text-2xl text-white/60">TỶ</span></p>
+            <div class="bar shimmer w-full rounded-t-xl transition-all duration-700 ease-out" style="height:0%;background:${COLOR[id]}"></div>
+            <p class="name text-2xl font-black uppercase tracking-wide text-white/80">${TEAM_META[id].label}</p>
+          </div>`).join('');
+      };
+      buildBoard();
+      const renderLeaderboard = () => {
+        const ranked = rankTeams(teamsCache);
+        const rankOf = {};
+        ranked.forEach((t, i) => { rankOf[t.id] = i + 1; });
+        const max = Math.max(1, ...TEAM_IDS.map((id) => (teamsCache[id] ? Number(teamsCache[id].score) || 0 : 0)));
+        TEAM_IDS.forEach((id) => {
+          const col = board.querySelector(`[data-col="${id}"]`);
+          const t = teamsCache[id] || {};
+          const score = Number(t.score) || 0;
+          animateCount(col.querySelector('.score'), score);
+          col.querySelector('.name').textContent = t.name || TEAM_META[id].label;
+          col.querySelector('.bar').style.height = `${Math.max(3, (score / max) * 100)}%`;
+          col.querySelector('.rank').textContent = `#${rankOf[id] || '—'}`;
+          col.querySelector('.crown').style.visibility = (rankOf[id] === 1 && score > 0) ? 'visible' : 'hidden';
+        });
+      };
+
+      /* ── MARKET ── */
+      const renderMarket = () => {
+        const wrap = document.getElementById('market-cards');
+        wrap.innerHTML = ['A', 'B', 'C'].map((key, i) => {
+          const m = MARKETS[key];
+          if (!m) return '';
+          return `<div class="anim-rise float flex flex-col items-center gap-6 rounded-2xl border-2 border-white/15 bg-white/5 p-10 text-sky-300"
+            style="animation-delay:${i * 120}ms">
+            <span class="grid h-24 w-24 place-items-center rounded-2xl" style="background:rgba(56,189,248,0.12)">${MARKET_ICON[key]}</span>
+            <p class="text-3xl font-black uppercase tracking-wide text-white">${m.name}</p>
+            <p class="tabular text-7xl font-black text-white">${formatNumber(m.value)} <span class="text-3xl text-white/60">TỶ</span></p>
+          </div>`;
+        }).join('');
+      };
+
+      /* ── ALERT ── */
+      const renderAlert = () => {
+        const ids = Array.isArray(stateCache.suddenDeathTeams) ? stateCache.suddenDeathTeams : [];
+        document.getElementById('alert-teams').textContent = ids
+          .map((id) => (teamsCache[id] && teamsCache[id].name) || (TEAM_META[id] && TEAM_META[id].label) || id)
+          .join('  ⚔  ');
+        // Blind: show only HOW MANY have locked, never the amounts (revealed at victory).
+        const locked = ids.filter((id) => teamsCache[id] && teamsCache[id].bidAmount != null).length;
+        document.getElementById('alert-status').textContent = `Đã chốt: ${locked}/${ids.length || 2}`;
+      };
+
+      /* ── VICTORY (confetti) ── */
+      const confettiWrap = document.getElementById('confetti');
+      let confettiOn = false;
+      const startConfetti = () => {
+        if (confettiOn) return;
+        confettiOn = true;
+        const colors = ['#2563eb', '#059669', '#f59e0b', '#e11d48', '#ffffff', '#38bdf8'];
+        for (let i = 0; i < 90; i += 1) {
+          const c = document.createElement('div');
+          c.className = 'confetti';
+          c.style.left = `${Math.random() * 100}%`;
+          c.style.background = colors[i % colors.length];
+          c.style.animationDuration = `${2.4 + Math.random() * 2.6}s`;
+          c.style.animationDelay = `${Math.random() * 1.2}s`;
+          confettiWrap.appendChild(c);
+        }
+      };
+      const stopConfetti = () => { confettiOn = false; confettiWrap.innerHTML = ''; };
+      const renderVictory = () => {
+        const w = stateCache.winner;
+        const t = w ? (teamsCache[w] || {}) : {};
+        document.getElementById('victory-name').textContent = t.name || (w && TEAM_META[w] ? TEAM_META[w].label : '—');
+        animateCount(document.getElementById('victory-score'), t.score || 0);
+
+        // Reveal the two sudden-death bids for transparency (if this was a duel).
+        const ids = Array.isArray(stateCache.suddenDeathTeams) ? stateCache.suddenDeathTeams : [];
+        const bidsEl = document.getElementById('victory-bids');
+        if (ids.length === 2) {
+          bidsEl.style.display = 'flex';
+          bidsEl.innerHTML = ids.map((id) => {
+            const tt = teamsCache[id] || {};
+            const win = stateCache.winner === id;
+            return `<div class="flex flex-col items-center gap-1 rounded-xl border-2 px-10 py-4 ${win ? 'border-amber-400' : 'border-white/15'}">
+              <span class="text-2xl font-black uppercase" style="color:${COLOR[id] || '#fff'}">${tt.name || TEAM_META[id].label}</span>
+              <span class="tabular text-5xl font-black text-white">${formatNumber(tt.bidAmount || 0)} TỶ</span>
+              <span class="text-xs font-bold uppercase tracking-[0.3em] text-white/50">Giá thầu</span>
+            </div>`;
+          }).join('');
+        } else {
+          bidsEl.style.display = 'none';
+          bidsEl.innerHTML = '';
+        }
+        startConfetti();
+      };
+
+      /* ── ROUTER ── */
+      const render = () => {
+        const phase = stateCache.currentPhase || PHASES.LOBBY;
+        if (phase !== PHASES.VICTORY) stopConfetti();
+        switch (phase) {
+          case PHASES.LOBBY: showScreen('screen-lobby'); renderLobby(); break;
+          case PHASES.BLUE_OCEAN: showScreen('screen-market'); renderMarket(); break;
+          case PHASES.SUDDEN_DEATH: showScreen('screen-alert'); renderAlert(); break;
+          case PHASES.VICTORY: showScreen('screen-victory'); renderVictory(); break;
+          default: showScreen('screen-leaderboard'); renderLeaderboard(); break; // P1, P3_CHECK
+        }
+      };
+
+      store.onState((s) => { stateCache = s; render(); });
+      store.onTeams((t) => { teamsCache = t; render(); });
+    });
+  </script>
+</body>
+</html>

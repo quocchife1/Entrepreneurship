@@ -1,0 +1,199 @@
+/* ============================================================================
+   Blue Ocean — custom CSS
+   Tailwind utilities handle most styling; this file holds what they can't:
+   keyframe animation, the ocean motion system for the projector, and a few
+   show/hide helpers. The CLIENT + ADMIN stay flat & solid; the PROJECTOR is the
+   "show" surface and is allowed richer motion + depth (waves, glow, confetti).
+   ========================================================================== */
+
+/* ── Screen switching ──────────────────────────────────────────────────────
+   Each surface holds several full-screen "screens"; only one is active. */
+.screen {
+  display: none;
+}
+.screen.is-active {
+  display: flex;
+}
+
+/* ── Number readability ──────────────────────────────────────────────────── */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* ============================================================================
+   1 · SHARED MOTION (restrained — used by client + admin)
+   ========================================================================== */
+@keyframes bo-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes bo-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes bo-pop {
+  0%   { transform: scale(0.92); }
+  60%  { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+@keyframes bo-alert-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+
+.anim-fade  { animation: bo-fade-in 220ms ease-out both; }
+.anim-rise  { animation: bo-rise 320ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.anim-pop   { animation: bo-pop 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.anim-alert { animation: bo-alert-pulse 1s ease-in-out infinite; }
+
+/* ============================================================================
+   2 · CLIENT — quiz result overlay (✓ / ✗ flash on the player's phone)
+   ========================================================================== */
+@keyframes bo-result-in {
+  0%   { opacity: 0; transform: scale(0.6); }
+  55%  { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes bo-check-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes bo-shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-8px); }
+  40%, 60% { transform: translateX(8px); }
+}
+.result-pop  { animation: bo-result-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.result-shake { animation: bo-shake 600ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+/* SVG check/cross stroke draw-on */
+.draw-path {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: bo-check-draw 480ms 120ms ease-out forwards;
+}
+
+/* ============================================================================
+   3 · PROJECTOR — ocean motion system
+   ========================================================================== */
+
+/* Deep-sea backdrop (allowed gradient here: this is the cinematic show screen). */
+.ocean-bg {
+  background:
+    radial-gradient(120% 80% at 50% -10%, #1e3a8a 0%, #0b1b3f 45%, #060f24 100%);
+}
+
+/* Layered SVG waves drifting horizontally at different speeds. */
+@keyframes bo-wave-x {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.wave-layer {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 200%;
+  height: 38vh;
+  will-change: transform;
+}
+.wave-1 { animation: bo-wave-x 18s linear infinite; opacity: 0.30; }
+.wave-2 { animation: bo-wave-x 26s linear infinite; opacity: 0.22; height: 30vh; }
+.wave-3 { animation: bo-wave-x 36s linear infinite; opacity: 0.16; height: 24vh; }
+
+/* Rising bubbles. */
+@keyframes bo-bubble {
+  0%   { transform: translateY(0) scale(1); opacity: 0; }
+  10%  { opacity: 0.5; }
+  100% { transform: translateY(-105vh) scale(1.25); opacity: 0; }
+}
+.bubble {
+  position: absolute;
+  bottom: -6vh;
+  border-radius: 9999px;
+  background: rgba(125, 211, 252, 0.18);
+  border: 1px solid rgba(186, 230, 253, 0.25);
+  will-change: transform, opacity;
+  animation: bo-bubble linear infinite;
+}
+
+/* Soft pulsing glow for hero numbers / titles. */
+@keyframes bo-glow {
+  0%, 100% { text-shadow: 0 0 24px rgba(96, 165, 250, 0.45); }
+  50%      { text-shadow: 0 0 44px rgba(125, 211, 252, 0.85); }
+}
+.glow-pulse { animation: bo-glow 3.2s ease-in-out infinite; }
+
+/* Sheen sweep across leaderboard bars / cards. */
+@keyframes bo-shimmer {
+  from { transform: translateX(-120%); }
+  to   { transform: translateX(220%); }
+}
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.28) 50%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+  animation: bo-shimmer 3.4s ease-in-out infinite;
+}
+
+/* Slow zoom/float for entrance moments. */
+@keyframes bo-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.float { animation: bo-float 5s ease-in-out infinite; }
+
+/* Crisp shake for the crisis alert title. */
+@keyframes bo-crisis {
+  0%, 100% { transform: translateX(0) skewX(0); }
+  25% { transform: translateX(-6px) skewX(-1deg); }
+  75% { transform: translateX(6px) skewX(1deg); }
+}
+.anim-crisis { animation: bo-crisis 360ms ease-in-out infinite; }
+
+/* Victory confetti. Individual pieces get inline left/color/delay from JS. */
+@keyframes bo-confetti {
+  0%   { transform: translateY(-12vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(112vh) rotate(720deg); opacity: 0.9; }
+}
+.confetti {
+  position: absolute;
+  top: 0;
+  width: 12px;
+  height: 18px;
+  border-radius: 2px;
+  will-change: transform;
+  animation: bo-confetti linear forwards;
+}
+
+/* Count-up numbers nudge as they tick (set by JS). */
+@keyframes bo-tick {
+  from { transform: translateY(-4px); opacity: 0.6; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.tick { animation: bo-tick 180ms ease-out; }
+
+/* Rank badge entrance. */
+.badge-pop { animation: bo-pop 360ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ============================================================================
+   4 · Accessibility — honour reduced-motion (kill ambient loops)
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .anim-fade, .anim-rise, .anim-pop, .anim-alert,
+  .result-pop, .result-shake, .draw-path,
+  .wave-1, .wave-2, .wave-3, .bubble, .glow-pulse, .shimmer::after,
+  .float, .anim-crisis, .confetti, .tick, .badge-pop {
+    animation: none !important;
+  }
+}
