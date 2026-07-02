@@ -3,9 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#060f24" />
-  <title>Blue Ocean — Màn chiếu</title>
+  <meta name="theme-color" content="#f8fafc" />
+  <title>MARKET FIT · Màn chiếu</title>
 
+  <!-- Inter: the neutral Stripe/Vercel-light choice, best Vietnamese diacritic
+       legibility at projector distance. Local tool, not a shipped SaaS surface. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -13,113 +15,211 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
-      theme: { extend: { fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
-        colors: { primary: '#2563eb', alert: '#dc2626', surface: '#0f172a' } } },
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+        },
+      },
     };
   </script>
 
   <link rel="stylesheet" href="./style.css" />
 
+  <!-- GSAP: isolated to the Sudden-Death bid-roll only. Loaded before the inline
+       script so `gsap` exists on DOMContentLoaded. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script defer src="./app.js"></script>
+
+  <style>
+    /* Each screen centers a single .fit wrapper. A JS scaler shrinks .fit with a
+       transform so its content ALWAYS fits both width and height of any projector
+       (16:9, 16:10, 4:3, ultrawide) with zero clipping and zero scrollbars. */
+    .screen-wrap { overflow: hidden; }
+    .fit { transform-origin: center center; will-change: transform; }
+
+    /* Container-query context: numbers scale to their own cell width via cqi. */
+    .cq { container-type: inline-size; }
+
+    /* Fluid type helpers (no fixed px). clamp(min, preferred, max). */
+    .fluid-brand { font-size: clamp(2.5rem, 8vw, 7.5rem); line-height: 0.9; }
+    .fluid-h2    { font-size: clamp(1.5rem, 4.2vw, 3.5rem); line-height: 1; }
+    .fluid-label { font-size: clamp(0.7rem, 1.15vw, 1.05rem); }
+    .fluid-sub   { font-size: clamp(0.95rem, 2vw, 1.8rem); }
+
+    /* Motion - restrained, NO glow. Entrance + state feedback only. */
+    @keyframes bo-rise2 { from { opacity: 0; transform: translateY(1.25rem); } to { opacity: 1; transform: translateY(0); } }
+    .anim-rise { animation: bo-rise2 460ms cubic-bezier(0.22,1,0.36,1) both; }
+
+    @keyframes bo-live { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .live-dot { animation: bo-live 1.4s ease-in-out infinite; }
+
+    /* Solid-red Sudden-Death flash: a plain color block pulsing opacity (no neon). */
+    @keyframes bo-flash { 0%, 100% { opacity: 0; } 50% { opacity: 0.22; } }
+    .danger-flash { animation: bo-flash 0.85s steps(1, end) infinite; }
+
+    @keyframes bo-alarm { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.09); } }
+    .alarm-icon { animation: bo-alarm 0.85s ease-in-out infinite; }
+
+    /* White caution stripes on the solid red block (solid, print-safe, no glow). */
+    .hazard { height: clamp(0.8rem, 1.8vh, 1.4rem); background-image: repeating-linear-gradient(-45deg, #ffffff 0 18px, transparent 18px 36px); opacity: 0.9; }
+    @keyframes bo-hazard { from { background-position: 0 0; } to { background-position: 72px 0; } }
+    .hazard-move { animation: bo-hazard 0.8s linear infinite; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .anim-rise, .live-dot, .danger-flash, .alarm-icon, .hazard-move { animation: none !important; }
+    }
+  </style>
 </head>
 
-<!-- HOST VIEW · cinematic big screen. Ocean motion behind; screens react to phase. -->
-<body class="ocean-bg relative h-full min-h-[100dvh] overflow-hidden font-sans text-white antialiased">
+<!-- PROJECTOR VIEW · light editorial scoreboard. High-contrast, fluid, and
+     auto-fitted to any aspect ratio. Real-time state via window.BlueOcean. -->
+<body class="relative h-full min-h-[100dvh] overflow-hidden bg-slate-50 font-sans text-slate-900 antialiased">
 
-  <!-- ── AMBIENT OCEAN (behind everything) ────────────────────────────────── -->
-  <div class="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-    <div id="bubbles" class="absolute inset-0"></div>
-    <svg class="wave-layer wave-3" viewBox="0 0 2880 320" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M0,160 C360,60 1080,260 1440,160 C1800,60 2520,260 2880,160 L2880,320 L0,320 Z" fill="#1d4ed8" />
-    </svg>
-    <svg class="wave-layer wave-2" viewBox="0 0 2880 320" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M0,160 C360,60 1080,260 1440,160 C1800,60 2520,260 2880,160 L2880,320 L0,320 Z" fill="#2563eb" />
-    </svg>
-    <svg class="wave-layer wave-1" viewBox="0 0 2880 320" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M0,160 C360,60 1080,260 1440,160 C1800,60 2520,260 2880,160 L2880,320 L0,320 Z" fill="#38bdf8" />
-    </svg>
+  <!-- ── BROADCAST TOP BAR (persistent, above all screens) ─────────────────── -->
+  <div id="hud-bar" class="pointer-events-none fixed inset-x-0 top-0 z-40 flex min-h-[6.5vh] items-center justify-between gap-4 border-b border-slate-200 bg-white/90 px-[3vw] py-[1.2vh] backdrop-blur-sm">
+    <div class="flex items-center gap-3">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-blue-600 text-white">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" class="h-5 w-5"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+      </span>
+      <span class="fluid-label font-extrabold uppercase tracking-[0.2em] text-slate-900">MARKET&nbsp;FIT</span>
+      <span class="fluid-label hidden font-semibold uppercase tracking-[0.2em] text-slate-400 md:inline">Độc chiếm thị trường</span>
+    </div>
+    <div class="fluid-label flex items-center gap-3 font-semibold uppercase tracking-[0.2em]">
+      <span id="hud-phase" class="text-blue-600">Sảnh chờ</span>
+      <span class="h-4 w-px bg-slate-200"></span>
+      <span class="flex items-center gap-2 text-slate-600">
+        <span class="live-dot inline-block h-2.5 w-2.5 rounded-full bg-red-600"></span>LIVE
+      </span>
+    </div>
   </div>
 
   <!-- ── SCREEN: LOBBY (PHASE_0) ──────────────────────────────────────────── -->
-  <section id="screen-lobby" class="screen absolute inset-0 z-10 flex-col items-center justify-center gap-10 p-16">
-    <p class="text-base font-bold uppercase tracking-[0.6em] text-sky-300">Presentation Game</p>
-    <h1 class="glow-pulse float text-center text-[9rem] font-black uppercase leading-none tracking-tighter text-white">Blue Ocean</h1>
-    <p class="text-2xl font-bold uppercase tracking-[0.4em] text-sky-200/70">Chiến lược đại dương xanh</p>
-
-    <div class="flex items-center gap-16">
-      <div class="flex flex-col items-center gap-4">
-        <div class="shimmer grid h-64 w-64 place-items-center rounded-2xl border-4 border-sky-400/40 bg-white">
-          <span class="text-3xl font-black tracking-widest text-slate-900">QR</span>
+  <section id="screen-lobby" class="screen screen-wrap absolute inset-0 z-10 items-center justify-center px-[4vw] pb-[3vh] pt-[8vh]">
+    <div class="fit flex w-full flex-col items-center justify-center gap-[3vh] lg:flex-row lg:justify-between lg:gap-[4vw]">
+      <!-- Left: brand block -->
+      <div class="flex flex-col items-center gap-[1.8vh] text-center lg:items-start lg:text-left">
+        <h1 class="fluid-brand font-black uppercase tracking-tight text-slate-900">
+          MARKET<br /><span class="text-blue-600">FIT</span>
+        </h1>
+        <p class="fluid-sub font-bold uppercase tracking-[0.12em] text-slate-500">Độc chiếm thị trường</p>
+        <div class="mt-1 flex flex-wrap justify-center gap-x-8 gap-y-3 lg:justify-start">
+          <div><p class="text-[clamp(1.5rem,3.6vw,2.75rem)] font-black tabular-nums text-slate-900">04</p><p class="fluid-label uppercase tracking-[0.18em] text-slate-400">Đội startup</p></div>
         </div>
-        <p class="text-base font-semibold uppercase tracking-[0.3em] text-sky-200/70">Quét để tham gia</p>
       </div>
 
-      <div class="flex flex-col gap-5">
-        <div id="lobby-slots" class="grid grid-cols-2 gap-4"></div>
-        <p class="text-center text-3xl font-black uppercase tracking-wide">
-          <span id="lobby-ready" class="tabular glow-pulse text-5xl text-emerald-400">0</span>
-          <span class="text-sky-200/70"> / 4 sẵn sàng</span>
+      <!-- Right: join panel -->
+      <div class="flex w-full max-w-[30rem] shrink-0 flex-col items-center gap-[1.8vh] rounded-2xl border border-slate-200 bg-white p-[2.4vh] shadow-sm lg:w-auto">
+        <div class="flex flex-col items-center gap-2">
+          <div class="grid aspect-square w-[clamp(6.5rem,14vh,10rem)] place-items-center rounded-2xl border-2 border-blue-600 bg-white">
+            <span class="text-[clamp(1.25rem,3.5vh,2.25rem)] font-black tracking-widest text-slate-900">QR</span>
+          </div>
+          <p class="fluid-label font-semibold uppercase tracking-[0.24em] text-slate-500">Quét để tham gia</p>
+        </div>
+        <div class="h-px w-full bg-slate-200"></div>
+        <div id="lobby-slots" class="grid w-full grid-cols-1 gap-2.5"></div>
+        <p class="fluid-label font-bold uppercase tracking-wide text-slate-500">
+          <span id="lobby-ready" class="text-[clamp(1.5rem,3.5vh,2.5rem)] font-black tabular-nums text-blue-600">0</span> / 4 SẴN SÀNG
         </p>
       </div>
     </div>
   </section>
 
   <!-- ── SCREEN: LEADERBOARD (PHASE_1 / PHASE_3_CHECK) ────────────────────── -->
-  <section id="screen-leaderboard" class="screen absolute inset-0 z-10 flex-col p-14">
-    <div class="mb-6 flex items-center gap-4">
-      <span class="h-10 w-2 rounded-full bg-sky-400"></span>
-      <h2 class="text-6xl font-black uppercase tracking-tight">Bảng tài sản</h2>
+  <section id="screen-leaderboard" class="screen screen-wrap absolute inset-0 z-10 items-center justify-center px-[4vw] pb-[3vh] pt-[8vh]">
+    <div class="fit flex w-full flex-col gap-[2vh]">
+      <div class="flex flex-wrap items-end justify-between gap-2">
+        <div class="flex items-center gap-3">
+          <span class="h-[clamp(1.5rem,3.6vh,2.5rem)] w-1.5 rounded bg-blue-600"></span>
+          <h2 class="fluid-h2 font-black uppercase tracking-tight text-slate-900">Bảng vốn hoá</h2>
+        </div>
+        <p class="fluid-label font-semibold uppercase tracking-[0.22em] text-slate-400">Đơn vị · tỷ đồng</p>
+      </div>
+      <div id="board" class="grid grid-cols-2 items-end gap-[2vw] lg:grid-cols-4"></div>
     </div>
-    <div id="board" class="grid flex-1 grid-cols-4 items-end gap-10 pb-8"></div>
   </section>
 
   <!-- ── SCREEN: MARKET (PHASE_2) ─────────────────────────────────────────── -->
-  <section id="screen-market" class="screen absolute inset-0 z-10 flex-col items-center justify-center gap-14 p-16">
-    <div class="flex items-center gap-4">
-      <span class="h-12 w-2 rounded-full bg-sky-400"></span>
-      <h2 class="text-7xl font-black uppercase tracking-tight">Chọn thị trường</h2>
+  <section id="screen-market" class="screen screen-wrap absolute inset-0 z-10 items-center justify-center px-[4vw] pb-[3vh] pt-[8vh]">
+    <div class="fit flex w-full flex-col gap-[2.5vh]">
+      <div class="flex flex-wrap items-end justify-between gap-2">
+        <div class="flex items-center gap-3">
+          <span class="h-[clamp(1.5rem,3.6vh,2.5rem)] w-1.5 rounded bg-blue-600"></span>
+          <h2 class="fluid-h2 font-black uppercase tracking-tight text-slate-900">Mục tiêu thâm nhập</h2>
+        </div>
+        <p class="fluid-label font-semibold uppercase tracking-[0.22em] text-slate-400">Độc chiếm · nhận trọn giá trị</p>
+      </div>
+      <div id="market-cards" class="grid w-full grid-cols-1 gap-[2vw] md:grid-cols-2"></div>
     </div>
-    <div id="market-cards" class="grid w-full max-w-7xl grid-cols-3 gap-12"></div>
   </section>
 
-  <!-- ── SCREEN: ALERT (PHASE_3) ──────────────────────────────────────────── -->
-  <section id="screen-alert" class="screen absolute inset-0 z-20 flex-col items-center justify-center gap-10 bg-red-700 p-16">
-    <svg class="anim-alert h-40 w-40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-      <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
-    </svg>
-    <p class="anim-crisis text-[8rem] font-black uppercase leading-none tracking-tighter text-white">Khủng hoảng</p>
-    <p class="text-6xl font-black uppercase tracking-tight text-white">Đấu thầu sinh tử</p>
-    <p id="alert-teams" class="text-4xl font-black uppercase tracking-[0.3em] text-red-100"></p>
-    <p id="alert-status" class="text-2xl font-bold uppercase tracking-[0.3em] text-red-200/70"></p>
+  <!-- ── SCREEN: SUDDEN DEATH (PHASE_3) ───────────────────────────────────── -->
+  <section id="screen-alert" class="screen screen-wrap absolute inset-0 z-30 items-center justify-center bg-red-600 px-[5vw] pb-[3vh] pt-[8vh] text-white">
+    <div class="danger-flash pointer-events-none absolute inset-0 bg-red-900"></div>
+    <div class="hazard hazard-move absolute inset-x-0 top-0"></div>
+    <div class="hazard hazard-move absolute inset-x-0 bottom-0"></div>
+
+    <div class="fit relative flex flex-col items-center gap-[2vh]">
+      <svg class="alarm-icon h-[clamp(3.5rem,10vh,7rem)] w-[clamp(3.5rem,10vh,7rem)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+        <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+      <p class="fluid-label font-bold uppercase tracking-[0.4em] text-red-100">Cảnh báo</p>
+      <p class="text-center text-[clamp(2.25rem,7.5vw,6.5rem)] font-black uppercase leading-[0.9] tracking-tight">Đấu thầu sinh tử</p>
+      <p id="alert-teams" class="flex flex-wrap items-center justify-center gap-x-4 text-center text-[clamp(1.35rem,4vw,3rem)] font-black uppercase"></p>
+      <!-- high-speed bid roll: live blind-bidding tension (values stay hidden) -->
+      <div class="rounded-xl bg-white px-[4vw] py-[1.4vh] text-red-600 shadow-sm">
+        <span id="sd-scramble" class="text-[clamp(1.75rem,6vw,4.5rem)] font-black tabular-nums tracking-[0.1em]">000</span>
+      </div>
+      <p id="alert-status" class="fluid-label font-bold uppercase tracking-[0.36em] text-red-100"></p>
+    </div>
   </section>
 
   <!-- ── SCREEN: VICTORY (PHASE_4) ────────────────────────────────────────── -->
-  <section id="screen-victory" class="screen absolute inset-0 z-20 flex-col items-center justify-center gap-8 p-16">
+  <section id="screen-victory" class="screen screen-wrap absolute inset-0 z-30 items-center justify-center bg-slate-50 px-[5vw] pb-[3vh] pt-[8vh]">
     <div id="confetti" class="pointer-events-none absolute inset-0 overflow-hidden"></div>
-    <svg class="float h-44 w-44" viewBox="0 0 24 24" fill="#facc15" stroke="#facc15" stroke-width="1" stroke-linejoin="round">
-      <path d="M3 6l4 4 5-7 5 7 4-4-2 13H5L3 6z" />
-    </svg>
-    <p class="text-2xl font-bold uppercase tracking-[0.5em] text-amber-300">Nhà vô địch</p>
-    <p id="victory-name" class="glow-pulse text-center text-8xl font-black uppercase leading-none tracking-tighter text-white">—</p>
-    <p class="text-4xl font-black uppercase tracking-wide"><span id="victory-score" class="tabular text-amber-300">0</span> TỶ</p>
 
-    <!-- Sudden-death transparency: both teams' locked bids, revealed here. -->
-    <div id="victory-bids" style="display:none" class="mt-2 gap-8"></div>
+    <div class="fit relative flex flex-col items-center gap-[1.6vh]">
+      <svg class="h-[clamp(4rem,11vh,8rem)] w-[clamp(4rem,11vh,8rem)] text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 12H5L3 7z" /><rect x="5" y="19" width="14" height="2.4" rx="0.4" />
+      </svg>
+      <p class="fluid-label font-bold uppercase tracking-[0.4em] text-blue-600">Nhà vô địch</p>
+      <p id="victory-name" class="text-center text-[clamp(2.25rem,6.5vw,6rem)] font-black uppercase leading-none tracking-tight text-slate-900">…</p>
+      <p class="text-[clamp(1.5rem,3.6vw,2.75rem)] font-black tabular-nums text-slate-900"><span id="victory-score" class="text-blue-600">0</span> <span class="text-[0.6em] text-slate-400">TỶ</span></p>
+      <!-- Sudden-death transparency: both locked bids, revealed here. -->
+      <div id="victory-bids" style="display:none" class="mt-[0.5vh] flex-wrap justify-center gap-[2vw]"></div>
+    </div>
   </section>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const { store, PHASES, TEAM_IDS, TEAM_META, MARKETS, rankTeams, formatNumber } = window.BlueOcean;
 
-      // Solid team colors as hex (for SVG + bar fills).
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // Team data colors (semantic e-sports encoding, solid on white). blue-600 is
+      // also the UI accent - acceptable overlap on an editorial scoreboard.
       const COLOR = { team1: '#2563eb', team2: '#059669', team3: '#f59e0b', team4: '#e11d48' };
+
+      // Display-name override ONLY. Values come from MARKETS (app.js) so the number
+      // on screen equals the number used for scoring (100 / 70 / 40).
+      const MARKET_NAME = { A: 'THỊ TRƯỜNG HIỆN CÓ', B: 'THỊ TRƯỜNG NGÁCH', C: 'THỊ TRƯỜNG MỚI' };
+      const MARKET_TAG  = { A: 'Quy mô lớn', B: 'Ngách tăng trưởng', C: 'Cơ hội mới' };
       const MARKET_ICON = {
-        A: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-16 w-16"><path d="M2 12s3-3 5-3 3 3 5 3 3-3 5-3 5 3 5 3"/><path d="M2 18s3-3 5-3 3 3 5 3 3-3 5-3 5 3 5 3"/></svg>',
-        B: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-16 w-16"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>',
-        C: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-16 w-16"><circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>',
+        A: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-full w-full"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.7" fill="currentColor"/></svg>',
+        B: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-full w-full"><path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>',
+        C: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-full w-full"><path d="M12 2v4"/><path d="M12 2 8.5 6h7L12 2z" fill="currentColor"/><path d="M5 10c3 2 3 8 0 10 5 0 6-4 7-7 1 3 2 7 7 7-3-2-3-8 0-10-5 0-6 4-7 7-1-3-2-7-7-7z"/></svg>',
+      };
+
+      const HUD_PHASE_LABEL = {
+        [PHASES.LOBBY]: 'Sảnh chờ',
+        [PHASES.ACCUMULATION]: 'Tích luỹ vốn',
+        [PHASES.BLUE_OCEAN]: 'Chọn thị trường',
+        [PHASES.PHASE_3_CHECK]: 'Đối soát',
+        [PHASES.SUDDEN_DEATH]: 'Đấu thầu sinh tử',
+        [PHASES.VICTORY]: 'Công bố',
       };
 
       let stateCache = {};
@@ -127,6 +227,31 @@
 
       const showScreen = (id) => document.querySelectorAll('.screen').forEach((el) =>
         el.classList.toggle('is-active', el.id === id));
+
+      /* ── Fit-to-viewport scaler ──────────────────────────────────────────────
+         Scales each screen's .fit content down (never up) so it always fits both
+         width and height of the current projector aspect ratio. Guarantees no
+         clipping / no scrollbars on 16:9, 16:10, 4:3, ultrawide, portrait. */
+      const fitScreen = (screen) => {
+        const fit = screen.querySelector('.fit');
+        if (!fit) return;
+        fit.style.transform = 'scale(1)';
+        const cs = getComputedStyle(screen);
+        const availW = screen.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+        const availH = screen.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+        const w = fit.scrollWidth;
+        const h = fit.scrollHeight;
+        if (!w || !h || !availW || !availH) return;
+        const scale = Math.min(1, availW / w, availH / h);
+        fit.style.transform = `scale(${scale})`;
+      };
+      const fitActive = () => {
+        const active = document.querySelector('.screen.is-active');
+        if (active) requestAnimationFrame(() => fitScreen(active));
+      };
+      window.addEventListener('resize', fitActive);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitActive);
+      window.addEventListener('load', fitActive);
 
       /* ── count-up util ── */
       const animateCount = (el, to) => {
@@ -136,9 +261,9 @@
         el.dataset.val = to;
         const from = cur;
         const start = performance.now();
-        const dur = 800;
+        const dur = reduceMotion ? 0 : 800;
         const step = (now) => {
-          const p = Math.min(1, (now - start) / dur);
+          const p = dur === 0 ? 1 : Math.min(1, (now - start) / dur);
           const e = 1 - Math.pow(1 - p, 3);
           el.textContent = Math.round(from + (to - from) * e).toLocaleString('vi-VN');
           if (p < 1 && Number(el.dataset.val) === to) requestAnimationFrame(step);
@@ -146,30 +271,19 @@
         requestAnimationFrame(step);
       };
 
-      /* ── ambient bubbles ── */
-      const bubbleWrap = document.getElementById('bubbles');
-      for (let i = 0; i < 18; i += 1) {
-        const b = document.createElement('div');
-        b.className = 'bubble';
-        const size = 8 + Math.floor(Math.random() * 46);
-        b.style.width = `${size}px`;
-        b.style.height = `${size}px`;
-        b.style.left = `${Math.random() * 100}%`;
-        b.style.animationDuration = `${10 + Math.random() * 16}s`;
-        b.style.animationDelay = `${-Math.random() * 18}s`;
-        bubbleWrap.appendChild(b);
-      }
-
       /* ── LOBBY ── */
       const renderLobby = () => {
         const slots = document.getElementById('lobby-slots');
         slots.innerHTML = TEAM_IDS.map((id) => {
           const t = teamsCache[id] || {};
           const on = t.ready === true;
-          return `<div class="flex items-center gap-3 rounded-xl border-2 px-5 py-4 transition-all duration-300 ${on ? 'border-transparent badge-pop' : 'border-white/15'}"
-            style="${on ? `background:${COLOR[id]}` : 'background:rgba(255,255,255,0.04)'}">
-            <span class="grid h-9 w-9 place-items-center rounded-md text-sm font-black" style="background:rgba(255,255,255,0.18)">${on ? '✓' : '·'}</span>
-            <span class="text-2xl font-black uppercase tracking-wide ${on ? 'text-white' : 'text-white/40'}">${on && t.name ? t.name : TEAM_META[id].label}</span>
+          const mark = on
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><polyline points="20 6 9 17 4 12"/></svg>'
+            : '<span class="block h-3 w-3 rounded-full border-2 border-current"></span>';
+          return `<div class="anim-rise flex items-center gap-3 rounded-lg border px-4 py-[1.2vh]"
+            style="${on ? `background:${COLOR[id]};border-color:${COLOR[id]}` : 'background:#fff;border-color:#e2e8f0'}">
+            <span class="grid h-8 w-8 shrink-0 place-items-center" style="color:${on ? '#fff' : '#94a3b8'}">${mark}</span>
+            <span class="text-[clamp(1.05rem,2.2vw,1.6rem)] font-black uppercase tracking-wide" style="color:${on ? '#fff' : '#94a3b8'}">${on && t.name ? t.name : TEAM_META[id].label}</span>
           </div>`;
         }).join('');
         animateCount(document.getElementById('lobby-ready'), TEAM_IDS.filter((id) => teamsCache[id] && teamsCache[id].ready).length);
@@ -178,15 +292,22 @@
       /* ── LEADERBOARD ── */
       const board = document.getElementById('board');
       const buildBoard = () => {
+        // Each column is its own container-query context; the bar sits in a fixed
+        // fluid-height track so bars stay meaningful whether the grid is 4-wide or
+        // wraps to 2-wide. The whole board is then auto-fitted by the scaler.
         board.innerHTML = TEAM_IDS.map((id) => `
-          <div class="flex h-full flex-col items-center justify-end gap-4" data-col="${id}">
+          <div class="cq flex h-full flex-col items-center justify-end gap-[1.2vh]" data-col="${id}">
             <div class="flex items-center gap-2">
-              <span class="rank grid h-9 w-9 place-items-center rounded-md bg-white/10 text-lg font-black">—</span>
-              <span class="crown text-3xl" style="visibility:hidden">👑</span>
+              <span class="rank grid h-9 min-w-9 place-items-center rounded-lg border-2 border-slate-200 px-2 text-[clamp(1rem,2.2vw,1.5rem)] font-black tabular-nums text-slate-400">-</span>
+              <span class="crown text-blue-600" style="display:none">
+                <svg viewBox="0 0 24 24" fill="currentColor" class="h-7 w-7"><path d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 11H5L3 7z"/></svg>
+              </span>
             </div>
-            <p class="tabular text-5xl font-black"><span class="score" data-val="0">0</span> <span class="text-2xl text-white/60">TỶ</span></p>
-            <div class="bar shimmer w-full rounded-t-xl transition-all duration-700 ease-out" style="height:0%;background:${COLOR[id]}"></div>
-            <p class="name text-2xl font-black uppercase tracking-wide text-white/80">${TEAM_META[id].label}</p>
+            <p class="text-[clamp(1.5rem,11cqi,4rem)] font-black tabular-nums leading-none text-slate-900"><span class="score" data-val="0">0</span></p>
+            <div class="flex h-[clamp(6rem,32vh,50vh)] w-full items-end rounded-lg bg-slate-100">
+              <div class="bar w-full rounded-lg transition-all duration-700 ease-out" style="height:0%;background:${COLOR[id]}"></div>
+            </div>
+            <p class="name text-center text-[clamp(1rem,2.2vw,1.6rem)] font-black uppercase leading-tight tracking-wide text-slate-700">${TEAM_META[id].label}</p>
           </div>`).join('');
       };
       buildBoard();
@@ -199,47 +320,87 @@
           const col = board.querySelector(`[data-col="${id}"]`);
           const t = teamsCache[id] || {};
           const score = Number(t.score) || 0;
+          const isLeader = rankOf[id] === 1 && score > 0;
           animateCount(col.querySelector('.score'), score);
           col.querySelector('.name').textContent = t.name || TEAM_META[id].label;
           col.querySelector('.bar').style.height = `${Math.max(3, (score / max) * 100)}%`;
-          col.querySelector('.rank').textContent = `#${rankOf[id] || '—'}`;
-          col.querySelector('.crown').style.visibility = (rankOf[id] === 1 && score > 0) ? 'visible' : 'hidden';
+          const rankEl = col.querySelector('.rank');
+          rankEl.textContent = `#${rankOf[id] || '-'}`;
+          rankEl.classList.toggle('border-blue-600', isLeader);
+          rankEl.classList.toggle('text-blue-600', isLeader);
+          rankEl.classList.toggle('border-slate-200', !isLeader);
+          rankEl.classList.toggle('text-slate-400', !isLeader);
+          col.querySelector('.crown').style.display = isLeader ? 'block' : 'none';
         });
       };
 
       /* ── MARKET ── */
       const renderMarket = () => {
         const wrap = document.getElementById('market-cards');
+        // A (biggest) is a solid blue block spanning the top row; B + C are white
+        // cards below. Value hierarchy drives the layout, no empty cells.
         wrap.innerHTML = ['A', 'B', 'C'].map((key, i) => {
           const m = MARKETS[key];
           if (!m) return '';
-          return `<div class="anim-rise float flex flex-col items-center gap-6 rounded-2xl border-2 border-white/15 bg-white/5 p-10 text-sky-300"
-            style="animation-delay:${i * 120}ms">
-            <span class="grid h-24 w-24 place-items-center rounded-2xl" style="background:rgba(56,189,248,0.12)">${MARKET_ICON[key]}</span>
-            <p class="text-3xl font-black uppercase tracking-wide text-white">${m.name}</p>
-            <p class="tabular text-7xl font-black text-white">${formatNumber(m.value)} <span class="text-3xl text-white/60">TỶ</span></p>
+          const big = key === 'A';
+          const wrapCls = big
+            ? 'md:col-span-2 bg-blue-600 text-white flex-row items-center justify-between px-[3vw] py-[2.4vh]'
+            : 'bg-white text-slate-900 border border-slate-200 shadow-sm flex-col justify-between gap-[1.6vh] p-[2vh]';
+          const tagCls = big ? 'text-blue-100' : 'text-slate-400';
+          const unitCls = big ? 'text-blue-200' : 'text-blue-600';
+          const iconCls = big ? 'text-white' : 'text-blue-600';
+          return `<div class="cq anim-rise ${wrapCls} flex overflow-hidden rounded-2xl" style="animation-delay:${i * 90}ms">
+            <div class="flex ${big ? 'flex-col gap-[1.2vh]' : 'items-center justify-between'}">
+              <div class="flex items-center gap-3">
+                <span class="grid ${big ? 'h-[clamp(2.75rem,5.5vw,4.5rem)] w-[clamp(2.75rem,5.5vw,4.5rem)]' : 'h-[clamp(2rem,5cqi,3.25rem)] w-[clamp(2rem,5cqi,3.25rem)]'} shrink-0 place-items-center ${iconCls}">${MARKET_ICON[key]}</span>
+                <span class="text-[clamp(0.75rem,2.4cqi,1.1rem)] font-bold uppercase tracking-[0.2em] ${tagCls}">${MARKET_TAG[key]}</span>
+              </div>
+              <p class="${big ? 'text-[clamp(1.6rem,4.2vw,3.75rem)]' : 'text-[clamp(1.25rem,6cqi,2.25rem)]'} font-black uppercase tracking-tight">${MARKET_NAME[key]}</p>
+            </div>
+            <p class="${big ? 'text-[clamp(3rem,10vw,8rem)]' : 'text-[clamp(2.75rem,22cqi,5.5rem)]'} font-black tabular-nums leading-none">
+              ${formatNumber(m.value)}<span class="text-[0.32em] font-black uppercase ${unitCls}"> tỷ</span>
+            </p>
           </div>`;
         }).join('');
       };
 
-      /* ── ALERT ── */
+      /* ── SUDDEN DEATH ── */
+      let sdTL = null;
+      const scrambleEl = document.getElementById('sd-scramble');
+      const startSuddenDeath = () => {
+        if (sdTL || reduceMotion || typeof gsap === 'undefined') {
+          if (reduceMotion) scrambleEl.textContent = '???';
+          return;
+        }
+        const roll = { v: 0 };
+        // High-speed number roll - reads as blind bids flying in. Loops until the
+        // phase changes and we kill it.
+        sdTL = gsap.to(roll, {
+          v: 999, duration: 0.28, ease: 'none', repeat: -1, repeatRefresh: true,
+          onUpdate: () => { scrambleEl.textContent = String(Math.floor(roll.v)).padStart(3, '0'); },
+        });
+      };
+      const stopSuddenDeath = () => { if (sdTL) { sdTL.kill(); sdTL = null; } };
+
       const renderAlert = () => {
         const ids = Array.isArray(stateCache.suddenDeathTeams) ? stateCache.suddenDeathTeams : [];
-        document.getElementById('alert-teams').textContent = ids
-          .map((id) => (teamsCache[id] && teamsCache[id].name) || (TEAM_META[id] && TEAM_META[id].label) || id)
-          .join('  ⚔  ');
-        // Blind: show only HOW MANY have locked, never the amounts (revealed at victory).
+        const names = ids.map((id) => (teamsCache[id] && teamsCache[id].name) || (TEAM_META[id] && TEAM_META[id].label) || id);
+        document.getElementById('alert-teams').innerHTML = names
+          .map((n) => `<span>${n}</span>`)
+          .join('<span class="text-red-200">VS</span>');
         const locked = ids.filter((id) => teamsCache[id] && teamsCache[id].bidAmount != null).length;
-        document.getElementById('alert-status').textContent = `Đã chốt: ${locked}/${ids.length || 2}`;
+        document.getElementById('alert-status').textContent = `Đã chốt giá · ${locked}/${ids.length || 2}`;
+        startSuddenDeath();
       };
 
       /* ── VICTORY (confetti) ── */
       const confettiWrap = document.getElementById('confetti');
       let confettiOn = false;
       const startConfetti = () => {
-        if (confettiOn) return;
+        if (confettiOn || reduceMotion) return;
         confettiOn = true;
-        const colors = ['#2563eb', '#059669', '#f59e0b', '#e11d48', '#ffffff', '#38bdf8'];
+        // Solid colors that read on a light background (no white).
+        const colors = ['#2563eb', '#059669', '#f59e0b', '#e11d48', '#0f172a'];
         for (let i = 0; i < 90; i += 1) {
           const c = document.createElement('div');
           c.className = 'confetti';
@@ -254,10 +415,9 @@
       const renderVictory = () => {
         const w = stateCache.winner;
         const t = w ? (teamsCache[w] || {}) : {};
-        document.getElementById('victory-name').textContent = t.name || (w && TEAM_META[w] ? TEAM_META[w].label : '—');
+        document.getElementById('victory-name').textContent = t.name || (w && TEAM_META[w] ? TEAM_META[w].label : '…');
         animateCount(document.getElementById('victory-score'), t.score || 0);
 
-        // Reveal the two sudden-death bids for transparency (if this was a duel).
         const ids = Array.isArray(stateCache.suddenDeathTeams) ? stateCache.suddenDeathTeams : [];
         const bidsEl = document.getElementById('victory-bids');
         if (ids.length === 2) {
@@ -265,10 +425,10 @@
           bidsEl.innerHTML = ids.map((id) => {
             const tt = teamsCache[id] || {};
             const win = stateCache.winner === id;
-            return `<div class="flex flex-col items-center gap-1 rounded-xl border-2 px-10 py-4 ${win ? 'border-amber-400' : 'border-white/15'}">
-              <span class="text-2xl font-black uppercase" style="color:${COLOR[id] || '#fff'}">${tt.name || TEAM_META[id].label}</span>
-              <span class="tabular text-5xl font-black text-white">${formatNumber(tt.bidAmount || 0)} TỶ</span>
-              <span class="text-xs font-bold uppercase tracking-[0.3em] text-white/50">Giá thầu</span>
+            return `<div class="flex flex-col items-center gap-1 rounded-2xl border px-[3vw] py-[1.4vh] ${win ? 'border-blue-600 bg-white shadow-sm' : 'border-slate-200 bg-white'}">
+              <span class="text-[clamp(1.05rem,2.2vw,1.6rem)] font-black uppercase" style="color:${COLOR[id] || '#0f172a'}">${tt.name || TEAM_META[id].label}</span>
+              <span class="text-[clamp(1.5rem,3.6vw,2.75rem)] font-black tabular-nums text-slate-900">${formatNumber(tt.bidAmount || 0)} <span class="text-[0.5em] text-blue-600">TỶ</span></span>
+              <span class="fluid-label font-bold uppercase tracking-[0.2em] text-slate-400">Giá thầu</span>
             </div>`;
           }).join('');
         } else {
@@ -281,7 +441,9 @@
       /* ── ROUTER ── */
       const render = () => {
         const phase = stateCache.currentPhase || PHASES.LOBBY;
+        document.getElementById('hud-phase').textContent = HUD_PHASE_LABEL[phase] || 'Trực tiếp';
         if (phase !== PHASES.VICTORY) stopConfetti();
+        if (phase !== PHASES.SUDDEN_DEATH) stopSuddenDeath();
         switch (phase) {
           case PHASES.LOBBY: showScreen('screen-lobby'); renderLobby(); break;
           case PHASES.BLUE_OCEAN: showScreen('screen-market'); renderMarket(); break;
@@ -289,6 +451,7 @@
           case PHASES.VICTORY: showScreen('screen-victory'); renderVictory(); break;
           default: showScreen('screen-leaderboard'); renderLeaderboard(); break; // P1, P3_CHECK
         }
+        fitActive(); // re-fit whenever content changes
       };
 
       store.onState((s) => { stateCache = s; render(); });

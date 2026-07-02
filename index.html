@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0f172a" />
-  <title>Blue Ocean — Đội chơi</title>
+  <meta name="theme-color" content="#f8fafc" />
+  <title>MARKET FIT · Đội chơi</title>
 
+  <!-- Inter: neutral Stripe/Linear-light choice, best Vietnamese diacritic legibility. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -13,86 +14,108 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
-      theme: { extend: { fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
-        colors: { primary: '#2563eb', alert: '#dc2626', surface: '#0f172a' } } },
+      theme: { extend: { fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] } } },
     };
   </script>
 
   <link rel="stylesheet" href="./style.css" />
+
+  <style>
+    html { -webkit-text-size-adjust: 100%; }
+    body { -webkit-tap-highlight-color: transparent; }
+    /* Press feedback is user-initiated; still honour reduced-motion. */
+    @media (prefers-reduced-motion: reduce) {
+      .active\:scale-95:active { transform: none !important; }
+    }
+  </style>
 
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script defer src="./app.js"></script>
 </head>
 
-<!-- CLIENT VIEW · mobile controller for one team. Bright flat background. -->
-<body class="flex h-full min-h-[100dvh] flex-col bg-gray-50 font-sans text-slate-900 antialiased">
+<!-- CLIENT VIEW · mobile controller for one team. Light, tactile, mobile-first. -->
+<body class="flex h-full min-h-[100dvh] flex-col bg-slate-50 font-sans text-slate-900 antialiased">
+
+  <!-- Safelist: guarantees the Tailwind Play CDN generates every class the inline
+       script toggles at runtime (dynamic classes can otherwise be missed). -->
+  <div class="hidden bg-blue-600 bg-red-600 bg-white bg-slate-100 bg-slate-200 bg-blue-50 text-white text-slate-900 text-slate-400 text-slate-300 text-blue-600 text-emerald-600 text-red-600 border-blue-600 border-slate-200 border-slate-100 bg-blue-600 bg-emerald-600 bg-amber-500 bg-rose-600"></div>
 
   <!-- ── TOP STATUS BAR (hidden until joined) ─────────────────────────────── -->
-  <header id="topbar" style="display:none" class="items-center justify-between gap-3 border-b-2 border-slate-200 bg-white px-4 py-3">
-    <div class="flex items-center gap-2 min-w-0">
-      <span id="top-dot" class="h-4 w-4 shrink-0 rounded-sm bg-slate-800"></span>
-      <span id="top-name" class="truncate text-base font-black uppercase tracking-wide">—</span>
+  <header id="topbar" style="display:none" class="items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+    <div class="flex min-w-0 items-center gap-2">
+      <span id="top-dot" class="h-4 w-4 shrink-0 rounded-md bg-slate-300"></span>
+      <span id="top-name" class="truncate text-base font-black uppercase tracking-wide">Đội</span>
     </div>
-    <span class="tabular text-lg font-black"><span id="top-score">0</span> TỶ</span>
+    <span class="tabular shrink-0 text-lg font-black text-slate-900"><span id="top-score">0</span> <span class="text-blue-600">TỶ</span></span>
   </header>
 
-  <main class="mx-auto flex w-full max-w-md flex-1 flex-col p-6">
+  <main class="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-6 pt-6">
 
     <!-- ── SCREEN: JOIN ──────────────────────────────────────────────────── -->
     <section id="screen-join" class="screen flex-1 flex-col justify-center gap-7">
       <div>
-        <p class="text-sm font-bold uppercase tracking-[0.3em] text-blue-600">Presentation game</p>
-        <h1 class="mt-1 text-5xl font-black uppercase tracking-tight">Blue Ocean</h1>
+        <p class="text-xs font-bold uppercase tracking-[0.3em] text-blue-600">Ứng dụng điều khiển</p>
+        <h1 class="mt-1.5 text-[clamp(2.25rem,11vw,3.25rem)] font-black uppercase leading-none tracking-tight text-slate-900">Market Fit</h1>
+        <p class="mt-1.5 text-sm font-bold uppercase tracking-[0.14em] text-slate-500">Độc chiếm thị trường</p>
       </div>
 
       <div class="flex flex-col gap-3">
-        <p class="text-sm font-bold uppercase tracking-widest text-slate-500">Chọn đội của bạn</p>
+        <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Chọn đội của bạn</p>
         <div id="team-picker" class="grid grid-cols-2 gap-3"></div>
-        <p class="text-xs font-semibold text-slate-400">Đội đang sáng = còn trống. Lỡ thoát ra? Chọn lại đúng đội cũ — dữ liệu vẫn còn.</p>
+        <p class="text-xs font-semibold leading-relaxed text-slate-400">Đội còn trống có thể chọn. Lỡ thoát ra? Chọn lại đúng đội cũ, dữ liệu vẫn còn.</p>
       </div>
 
-      <input id="join-name" type="text" inputmode="text" autocomplete="off" placeholder="TÊN ĐỘI"
-             class="w-full rounded-md border-2 border-slate-300 bg-white px-5 py-4 text-xl font-bold uppercase tracking-wide outline-none placeholder:text-slate-400 focus:border-blue-600" />
+      <div class="flex flex-col gap-2">
+        <label for="join-name" class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Tên đội</label>
+        <input id="join-name" type="text" inputmode="text" autocomplete="off" placeholder="Nhập tên đội"
+               class="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3.5 text-xl font-bold uppercase tracking-wide text-slate-900 outline-none placeholder:font-semibold placeholder:normal-case placeholder:tracking-normal placeholder:text-slate-400 focus:border-blue-600" />
+      </div>
 
       <button id="join-btn" disabled
-              class="w-full rounded-md bg-gray-400 py-5 text-2xl font-black uppercase tracking-widest text-white transition active:scale-95">
+              class="min-h-[56px] w-full rounded-xl bg-slate-200 py-4 text-xl font-black uppercase tracking-widest text-slate-400 transition active:scale-95 touch-manipulation select-none">
         Tham gia
       </button>
     </section>
 
     <!-- ── SCREEN: WAIT (lobby / between phases / result) ───────────────────── -->
     <section id="screen-wait" class="screen flex-1 flex-col items-center justify-center gap-3 text-center">
-      <p id="wait-title" class="text-4xl font-black uppercase tracking-tight">Đang chờ</p>
-      <p class="tabular text-2xl font-black uppercase text-slate-500"><span id="wait-score">0</span> TỶ</p>
+      <span class="grid h-16 w-16 place-items-center rounded-2xl bg-white text-slate-300 shadow-sm ring-1 ring-slate-200">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-8 w-8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      </span>
+      <p id="wait-title" class="text-3xl font-black uppercase tracking-tight text-slate-900">Đang chờ</p>
+      <p class="tabular text-lg font-black uppercase text-slate-400"><span id="wait-score">0</span> TỶ</p>
     </section>
 
     <!-- ── SCREEN: QUIZ (PHASE_1) ───────────────────────────────────────────── -->
-    <section id="screen-quiz" class="screen flex-1 flex-col gap-5">
-      <p class="text-center text-lg font-bold uppercase tracking-widest text-slate-500">Chọn đáp án</p>
-      <div id="quiz-grid" class="grid flex-1 grid-cols-2 gap-4"></div>
+    <section id="screen-quiz" class="screen flex-1 flex-col gap-4">
+      <p class="text-center text-sm font-bold uppercase tracking-[0.2em] text-slate-500">Chọn đáp án</p>
+      <div id="quiz-grid" class="grid flex-1 grid-cols-2 gap-3"></div>
     </section>
 
     <!-- ── SCREEN: MARKET (PHASE_2) ─────────────────────────────────────────── -->
-    <section id="screen-market" class="screen flex-1 flex-col justify-center gap-5">
-      <p class="text-center text-lg font-bold uppercase tracking-widest text-slate-500">Chọn thị trường</p>
-      <div id="market-grid" class="flex flex-col gap-4"></div>
+    <section id="screen-market" class="screen flex-1 flex-col justify-center gap-4">
+      <p class="text-center text-sm font-bold uppercase tracking-[0.2em] text-slate-500">Chọn thị trường</p>
+      <div id="market-grid" class="flex flex-col gap-3"></div>
       <button id="market-confirm" disabled
-              class="mt-2 w-full rounded-md bg-gray-400 py-5 text-2xl font-black uppercase tracking-widest text-white transition active:scale-95">
+              class="mt-2 min-h-[56px] w-full rounded-xl bg-slate-200 py-4 text-xl font-black uppercase tracking-widest text-slate-400 transition active:scale-95 touch-manipulation select-none">
         Chốt lựa chọn
       </button>
     </section>
 
     <!-- ── SCREEN: BID (PHASE_3, contenders only) ───────────────────────────── -->
-    <section id="screen-bid" class="screen flex-1 flex-col justify-center gap-6">
-      <p class="text-center text-lg font-bold uppercase tracking-widest text-red-600">Đấu thầu sinh tử</p>
-      <p class="text-center text-3xl font-black uppercase">
-        Ngân sách: <span id="bid-budget" class="tabular text-red-600">0</span> TỶ
-      </p>
+    <section id="screen-bid" class="screen flex-1 flex-col justify-center gap-5">
+      <div class="rounded-2xl border border-red-200 bg-white p-5 text-center shadow-sm">
+        <p class="text-sm font-bold uppercase tracking-[0.2em] text-red-600">Đấu thầu sinh tử</p>
+        <p class="mt-2 text-lg font-black uppercase text-slate-900">
+          Ngân sách <span id="bid-budget" class="tabular text-red-600">0</span> TỶ
+        </p>
+      </div>
       <input id="bid-input" type="number" min="0" inputmode="numeric" placeholder="0"
-             class="w-full rounded-md border-2 border-slate-300 bg-white px-5 py-5 text-center text-4xl font-black tabular outline-none focus:border-red-600" />
+             class="w-full rounded-xl border-2 border-slate-200 bg-white px-5 py-5 text-center text-4xl font-black tabular text-slate-900 outline-none placeholder:text-slate-300 focus:border-red-600" />
+      <p class="text-center text-xs font-semibold text-slate-400">Giá thầu vượt ngân sách sẽ tự động hạ về mức tối đa.</p>
       <button id="bid-btn"
-              class="w-full rounded-md bg-red-600 py-5 text-2xl font-black uppercase tracking-widest text-white transition active:scale-95">
+              class="min-h-[56px] w-full rounded-xl bg-red-600 py-4 text-xl font-black uppercase tracking-widest text-white transition active:scale-95 touch-manipulation select-none">
         Chốt thầu
       </button>
     </section>
@@ -100,33 +123,40 @@
   </main>
 
   <!-- ── HISTORY PANEL (always visible while playing) ───────────────────────── -->
-  <section id="history-panel" style="display:none" class="shrink-0 border-t-2 border-slate-200 bg-white">
-    <div class="mx-auto w-full max-w-md p-4">
-      <p class="mb-2 text-xs font-black uppercase tracking-widest text-slate-500">Quá trình chơi · giờ VN</p>
-      <div id="wallet-list" class="max-h-[34vh] space-y-2 overflow-y-auto"></div>
+  <section id="history-panel" style="display:none" class="shrink-0 border-t border-slate-200 bg-white">
+    <div class="mx-auto w-full max-w-md px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
+      <p class="mb-2 text-xs font-black uppercase tracking-[0.2em] text-slate-400">Quá trình chơi · giờ VN</p>
+      <div id="wallet-list" class="max-h-[30vh] space-y-2 overflow-y-auto"></div>
     </div>
   </section>
 
   <!-- ── MONEY TOAST (flashes the instant the balance changes) ──────────────── -->
-  <div id="money-toast" style="display:none" class="fixed left-1/2 top-20 z-30 -translate-x-1/2 rounded-md px-6 py-3 text-3xl font-black tabular text-white shadow-lg"></div>
+  <div id="money-toast" style="display:none" class="fixed left-1/2 top-20 z-30 -translate-x-1/2 rounded-xl px-6 py-3 text-2xl font-black tabular text-white shadow-lg"></div>
 
   <!-- ── LOCK SHIELD (admin-controlled; players cannot dismiss it) ──────────── -->
-  <div id="lock-shield" style="display:none" class="fixed inset-0 z-40 flex-col items-center justify-center gap-4 bg-slate-900/90 text-center">
-    <span class="text-7xl">🔒</span>
-    <span class="text-3xl font-black uppercase tracking-widest text-white">Admin đã khóa</span>
-    <span class="text-base font-bold uppercase tracking-widest text-slate-300">Vui lòng chờ mở khóa</span>
+  <div id="lock-shield" style="display:none" class="fixed inset-0 z-40 flex-col items-center justify-center bg-slate-900/50 p-6">
+    <div class="flex w-full max-w-xs flex-col items-center gap-4 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-xl">
+      <span class="grid h-16 w-16 place-items-center rounded-2xl bg-blue-50 text-blue-600">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-8 w-8"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      </span>
+      <span class="text-2xl font-black uppercase tracking-wide text-slate-900">Admin đã khóa</span>
+      <span class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Vui lòng chờ mở khóa</span>
+    </div>
   </div>
 
-  <!-- ── QUIZ RESULT OVERLAY (✓ / ✗) ────────────────────────────────────────── -->
-  <div id="result-overlay" style="display:none" class="fixed inset-0 z-50 flex-col items-center justify-center gap-6 text-center">
+  <!-- ── QUIZ RESULT OVERLAY (check / cross) ────────────────────────────────── -->
+  <div id="result-overlay" style="display:none" class="fixed inset-0 z-50 flex-col items-center justify-center gap-6 p-6 text-center">
     <div id="result-icon"></div>
-    <p id="result-title" class="text-6xl font-black uppercase tracking-tight text-white"></p>
-    <p id="result-points" class="tabular text-3xl font-black uppercase text-white"></p>
+    <p id="result-title" class="text-5xl font-black uppercase tracking-tight text-white"></p>
+    <p id="result-points" class="tabular text-2xl font-black uppercase text-white"></p>
   </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const { store, team, PHASES, TEAM_IDS, TEAM_META, MARKETS, formatNumber, formatTimeVN } = window.BlueOcean;
+
+      // Display-name override for markets (keys A/B/C unchanged; app.js untouched).
+      const MARKET_NAME = { A: 'HIỆN CÓ', B: 'NGÁCH', C: 'MỚI' };
 
       let myTeamId = localStorage.getItem('bo_team') || null;
       let pickedTeamId = null;
@@ -134,7 +164,7 @@
       let teamsCache = {};
       let joined = false;            // claimed a slot in THIS session
       let joinedSession = null;      // state.session at join time (reset detector)
-      let lastKey = null;            // phase(+contender) — resets locks between rounds
+      let lastKey = null;            // phase(+contender) resets locks between rounds
       let quizInit = false;          // skip stale quizResult on first load
       let lastQuizAt = 0;
       let prefilledName = false;
@@ -148,21 +178,36 @@
         document.querySelectorAll('.screen').forEach((el) => el.classList.toggle('is-active', el.id === id));
       };
 
-      /* ── lock / unlock button groups (UX rule: gray + disable + "ĐÃ CHỐT") ── */
-      const lockGroup = (buttons, chosenEl) => {
+      /* Primary CTA enabled/disabled visual (light: accent when ready, muted when not). */
+      const setCTA = (btn, enabled, accent) => {
+        btn.disabled = !enabled;
+        btn.classList.toggle(accent, enabled);
+        btn.classList.toggle('text-white', enabled);
+        btn.classList.toggle('bg-slate-200', !enabled);
+        btn.classList.toggle('text-slate-400', !enabled);
+      };
+
+      /* ── quiz lock / unlock (light: chosen = blue "ĐÃ CHỐT", others = muted) ── */
+      const lockGroup = (buttons, chosen) => {
         buttons.forEach((b) => {
           b.disabled = true;
-          if (b.dataset.color) b.classList.remove(b.dataset.color);
-          b.classList.add('bg-gray-400');
+          b.classList.remove('bg-white', 'text-slate-900', 'border-slate-200', 'bg-blue-600', 'text-white', 'border-blue-600');
+          const l = b.querySelector('[data-label]');
+          if (b === chosen) {
+            b.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+            if (l) { l.textContent = 'ĐÃ CHỐT'; l.style.fontSize = '1.5rem'; }
+          } else {
+            b.classList.add('bg-slate-100', 'text-slate-300', 'border-slate-200');
+          }
         });
-        if (chosenEl) { const l = chosenEl.querySelector('[data-label]'); if (l) l.textContent = 'ĐÃ CHỐT'; }
       };
       const unlockGroup = (buttons) => {
         buttons.forEach((b) => {
           b.disabled = false;
-          b.classList.remove('bg-gray-400');
-          if (b.dataset.color) b.classList.add(b.dataset.color);
-          const l = b.querySelector('[data-label]'); if (l && b.dataset.text) l.textContent = b.dataset.text;
+          b.classList.remove('bg-slate-100', 'text-slate-300', 'bg-blue-600', 'text-white', 'border-blue-600');
+          b.classList.add('bg-white', 'text-slate-900', 'border-slate-200');
+          const l = b.querySelector('[data-label]');
+          if (l && b.dataset.text) { l.textContent = b.dataset.text; l.style.fontSize = ''; }
         });
       };
 
@@ -176,22 +221,22 @@
           const t = teamsCache[id] || {};
           const takenByOther = t.online === true && id !== myTeamId;
           const active = id === pickedTeamId;
-          const cls = takenByOther
-            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            : (active ? `${TEAM_META[id].bg} text-white` : 'bg-slate-800 text-white');
+          let cls;
+          if (takenByOther) cls = 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed';
+          else if (active) cls = `${TEAM_META[id].bg} text-white border-transparent`;
+          else cls = 'bg-white text-slate-900 border-slate-200';
           const sub = takenByOther ? 'ĐANG CHƠI' : (t.ready && t.name ? t.name : 'CÒN TRỐNG');
+          const subCls = active ? 'text-white/80' : (takenByOther ? 'text-slate-400' : 'text-slate-400');
           return `<button data-team="${id}" ${takenByOther ? 'disabled' : ''}
-            class="flex flex-col items-center gap-1 rounded-md py-4 text-lg font-black uppercase tracking-wide ${cls}">
+            class="flex min-h-[64px] flex-col items-center justify-center gap-0.5 rounded-xl border-2 ${cls} px-3 py-3 text-lg font-black uppercase tracking-wide transition active:scale-95 touch-manipulation select-none">
             <span>${TEAM_META[id].label}</span>
-            <span class="text-[10px] font-bold opacity-80">${sub}</span>
+            <span class="truncate text-[10px] font-bold ${subCls}">${sub}</span>
           </button>`;
         }).join('');
       };
       const refreshJoinBtn = () => {
-        const ok = pickedTeamId && joinName.value.trim().length > 0;
-        joinBtn.disabled = !ok;
-        joinBtn.classList.toggle('bg-gray-400', !ok);
-        joinBtn.classList.toggle('bg-blue-600', ok);
+        const ok = !!(pickedTeamId && joinName.value.trim().length > 0);
+        setCTA(joinBtn, ok, 'bg-blue-600');
       };
 
       picker.addEventListener('click', (e) => {
@@ -215,9 +260,9 @@
       /* ── QUIZ ──────────────────────────────────────────────────────────── */
       const quizGrid = $('quiz-grid');
       quizGrid.innerHTML = ['A', 'B', 'C', 'D'].map((opt) => `
-        <button data-opt="${opt}" data-color="bg-slate-800" data-text="${opt}"
-          class="flex items-center justify-center rounded-md bg-slate-800 text-6xl font-black text-white transition active:scale-95">
-          <span data-label>${opt}</span>
+        <button data-opt="${opt}" data-text="${opt}"
+          class="flex min-h-[22vh] items-center justify-center rounded-xl border-2 border-slate-200 bg-white text-slate-900 transition active:scale-95 touch-manipulation select-none">
+          <span data-label class="text-[clamp(2.75rem,15vw,4.5rem)] font-black leading-none">${opt}</span>
         </button>`).join('');
       const quizButtons = Array.from(quizGrid.querySelectorAll('button'));
       quizGrid.addEventListener('click', async (e) => {
@@ -233,22 +278,23 @@
       let selectedMarket = null;
       let marketLocked = false;
 
+      const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 shrink-0"><polyline points="20 6 9 17 4 12"/></svg>';
       const renderMarketGrid = () => {
         marketGrid.innerHTML = ['A', 'B', 'C'].map((key) => {
-          const m = MARKETS[key];
+          const name = MARKET_NAME[key] || (MARKETS[key] && MARKETS[key].name) || key;
           const sel = key === selectedMarket;
-          const cls = marketLocked ? 'bg-gray-400' : (sel ? 'bg-blue-600' : 'bg-slate-800');
+          let cls;
+          if (marketLocked) cls = sel ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-100 text-slate-300 border-slate-200';
+          else cls = sel ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-900 border-slate-200';
           return `<button data-market="${key}" ${marketLocked ? 'disabled' : ''}
-            class="rounded-md ${cls} py-7 text-2xl font-black uppercase tracking-widest text-white transition active:scale-95">
-            ${m.name}${sel && !marketLocked ? ' ✓' : ''}
+            class="flex min-h-[60px] items-center justify-center gap-2 rounded-xl border-2 ${cls} px-4 py-4 text-xl font-black uppercase tracking-widest transition active:scale-95 touch-manipulation select-none">
+            ${sel ? CHECK_SVG : ''}<span>${name}</span>
           </button>`;
         }).join('');
       };
       const refreshMarketConfirm = () => {
-        const ok = selectedMarket && !marketLocked;
-        marketConfirm.disabled = !ok;
-        marketConfirm.classList.toggle('bg-gray-400', !ok);
-        marketConfirm.classList.toggle('bg-blue-600', ok);
+        const ok = !!(selectedMarket && !marketLocked);
+        setCTA(marketConfirm, ok, 'bg-blue-600');
       };
       const resetMarket = () => {
         selectedMarket = null;
@@ -269,9 +315,7 @@
         await team.chooseMarket(myTeamId, selectedMarket);
         marketLocked = true;
         renderMarketGrid();
-        marketConfirm.disabled = true;
-        marketConfirm.classList.remove('bg-blue-600');
-        marketConfirm.classList.add('bg-gray-400');
+        setCTA(marketConfirm, false, 'bg-blue-600');
         marketConfirm.textContent = 'ĐÃ CHỐT';
       });
       resetMarket();
@@ -288,16 +332,16 @@
         await team.placeBid(myTeamId, amount);
         bidInput.disabled = true;
         bidBtn.disabled = true;
-        bidBtn.classList.remove('bg-red-600');
-        bidBtn.classList.add('bg-gray-400');
+        bidBtn.classList.remove('bg-red-600', 'text-white');
+        bidBtn.classList.add('bg-slate-200', 'text-slate-400');
         bidBtn.textContent = 'ĐÃ CHỐT';
       });
       const resetBid = () => {
         bidInput.disabled = false;
         bidInput.value = '';
         bidBtn.disabled = false;
-        bidBtn.classList.remove('bg-gray-400');
-        bidBtn.classList.add('bg-red-600');
+        bidBtn.classList.remove('bg-slate-200', 'text-slate-400');
+        bidBtn.classList.add('bg-red-600', 'text-white');
         bidBtn.textContent = 'Chốt thầu';
       };
 
@@ -306,14 +350,14 @@
       const interactivePhase = () => [PHASES.ACCUMULATION, PHASES.BLUE_OCEAN, PHASES.SUDDEN_DEATH].includes(stateCache.currentPhase);
       const applyLockShield = () => {
         const on = stateCache.locked === true && joined && interactivePhase();
-        // Inline display is reliable; Tailwind Play CDN can miss dynamically-added
-        // `flex`/`hidden` classes, which is why the shield wasn't appearing.
+        // Inline display is reliable; the Play CDN can miss dynamically-added
+        // flex/hidden classes.
         lockShield.style.display = on ? 'flex' : 'none';
       };
 
       /* ── QUIZ RESULT OVERLAY ───────────────────────────────────────────── */
-      const SVG_CHECK = '<svg viewBox="0 0 120 120" class="h-40 w-40"><circle cx="60" cy="60" r="54" fill="none" stroke="white" stroke-width="6" opacity="0.4"/><path class="draw-path" d="M34 62 L54 82 L88 40" fill="none" stroke="white" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-      const SVG_CROSS = '<svg viewBox="0 0 120 120" class="h-40 w-40"><circle cx="60" cy="60" r="54" fill="none" stroke="white" stroke-width="6" opacity="0.4"/><path class="draw-path" d="M40 40 L80 80" fill="none" stroke="white" stroke-width="9" stroke-linecap="round"/><path class="draw-path" d="M80 40 L40 80" fill="none" stroke="white" stroke-width="9" stroke-linecap="round"/></svg>';
+      const SVG_CHECK = '<svg viewBox="0 0 120 120" class="h-36 w-36"><circle cx="60" cy="60" r="54" fill="none" stroke="white" stroke-width="6" opacity="0.4"/><path class="draw-path" d="M34 62 L54 82 L88 40" fill="none" stroke="white" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const SVG_CROSS = '<svg viewBox="0 0 120 120" class="h-36 w-36"><circle cx="60" cy="60" r="54" fill="none" stroke="white" stroke-width="6" opacity="0.4"/><path class="draw-path" d="M40 40 L80 80" fill="none" stroke="white" stroke-width="9" stroke-linecap="round"/><path class="draw-path" d="M80 40 L40 80" fill="none" stroke="white" stroke-width="9" stroke-linecap="round"/></svg>';
       const overlay = $('result-overlay');
       let resultTimer = null;
       const showResult = (qr) => {
@@ -352,7 +396,7 @@
           const sign = amt > 0 ? '+' : '';
           return `<div class="flex items-center justify-between border-b border-slate-100 pb-2">
             <div class="min-w-0">
-              <p class="truncate text-sm font-bold uppercase">${e.note || '—'}</p>
+              <p class="truncate text-sm font-bold uppercase text-slate-700">${e.note || 'Giao dịch'}</p>
               <p class="text-xs font-semibold text-slate-400">${formatTimeVN(e.at)}</p>
             </div>
             <p class="tabular shrink-0 text-lg font-black ${tone}">${sign}${formatNumber(amt)} TỶ</p>
@@ -388,7 +432,7 @@
         $('topbar').style.display = joined ? 'flex' : 'none';
         $('history-panel').style.display = joined ? 'block' : 'none';
         if (!joined) return;
-        $('top-dot').className = `h-4 w-4 shrink-0 rounded-sm ${TEAM_META[myTeamId].bg}`;
+        $('top-dot').className = `h-4 w-4 shrink-0 rounded-md ${TEAM_META[myTeamId].bg}`;
         $('top-name').textContent = t.name || TEAM_META[myTeamId].label;
         $('top-score').textContent = formatNumber(t.score || 0);
       };
@@ -402,8 +446,6 @@
         }
 
         if (!joined) {
-          // Pre-select previous team + name for a quick rejoin (only if the slot
-          // isn't currently occupied by someone else).
           if (!pickedTeamId && myTeamId && !(teamsCache[myTeamId] && teamsCache[myTeamId].online)) {
             pickedTeamId = myTeamId;
           }
@@ -422,7 +464,7 @@
         renderTopBar();
         renderWallet();
 
-        // Money toast — flash the delta the instant the balance changes.
+        // Money toast - flash the delta the instant the balance changes.
         const sc = Number((teamsCache[myTeamId] || {}).score) || 0;
         if (lastScore === null) lastScore = sc;
         else if (sc !== lastScore) { showMoneyToast(sc - lastScore); lastScore = sc; }
@@ -443,8 +485,11 @@
         }
         applyLockShield();
 
-        const setWait = (title) => {
-          $('wait-title').textContent = title;
+        const setWait = (title, accent) => {
+          const el = $('wait-title');
+          el.textContent = title;
+          el.classList.toggle('text-blue-600', accent === 'blue');
+          el.classList.toggle('text-slate-900', accent !== 'blue');
           $('wait-score').textContent = formatNumber((teamsCache[myTeamId] && teamsCache[myTeamId].score) || 0);
         };
 
@@ -464,7 +509,7 @@
             } else { setWait('Đã bị loại'); showScreen('screen-wait'); }
             break;
           case PHASES.VICTORY:
-            setWait(stateCache.winner === myTeamId ? '🏆 VÔ ĐỊCH' : 'Kết thúc');
+            setWait(stateCache.winner === myTeamId ? 'Vô địch' : 'Kết thúc', stateCache.winner === myTeamId ? 'blue' : '');
             showScreen('screen-wait');
             break;
           default: // LOBBY, PHASE_3_CHECK
