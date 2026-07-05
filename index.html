@@ -3,19 +3,19 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#f8fafc" />
+  <meta name="theme-color" content="#F7F5F0" />
   <title>MARKET FIT · Đội chơi</title>
 
-  <!-- Inter: neutral Stripe/Linear-light choice, best Vietnamese diacritic legibility. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    tailwind.config = {
-      theme: { extend: { fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] } } },
-    };
+    tailwind.config = { theme: { extend: { fontFamily: {
+      display: ['"Baloo 2"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+      sans: ['Inter', 'ui-sans-serif', 'sans-serif'],
+    } } } };
   </script>
 
   <link rel="stylesheet" href="./style.css" />
@@ -23,246 +23,336 @@
   <style>
     html { -webkit-text-size-adjust: 100%; }
     body { -webkit-tap-highlight-color: transparent; }
-    /* Press feedback is user-initiated; still honour reduced-motion. */
+    /* Bố cục an toàn cho mọi hướng màn: mỗi màn CĂN GIỮA khi vừa khung, TỰ CUỘN
+       khi nội dung cao hơn khung (safe center = không bao giờ che mất phần trên).
+       Nhờ vậy nút bấm luôn với tới được, kể cả khi xoay ngang điện thoại. */
+    .screen.is-active {
+      min-height: 100%;
+      flex-direction: column;
+      justify-content: safe center;
+    }
+    .tet-bg { position: fixed; inset: 0; z-index: -1; overflow: hidden;
+      background: radial-gradient(120% 85% at 50% -10%, #FCFBF7 0%, #F7F5F0 55%, #F1EEE6 100%); }
+    .tet-bg::before { content: ""; position: absolute; inset: 0; opacity: 0.05;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84' viewBox='0 0 84 84'%3E%3Cg fill='none' stroke='%23B98A3E' stroke-width='1.6'%3E%3Ccircle cx='21' cy='21' r='9'/%3E%3Ccircle cx='63' cy='63' r='9'/%3E%3C/g%3E%3C/svg%3E");
+      background-size: 84px 84px; }
+    .coin-drop { position: fixed; top: -10vh; z-index: 30; border-radius: 9999px; pointer-events: none; will-change: transform;
+      background: radial-gradient(circle at 36% 30%, #FFE9A8, #F4B740 55%, #B8860B); border: 2px solid #8A5A00; animation: coin-fall linear forwards; }
+    @keyframes coin-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(120vh) rotate(540deg); opacity: .9; } }
+    @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    .bob { animation: bob 3s ease-in-out infinite; }
+    @keyframes pulse-soft { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+    .pulse-soft { animation: pulse-soft 1.5s ease-in-out infinite; }
+    /* Bục podium màn kết thúc (client). */
+    .pod-c { position: relative; overflow: hidden; border-radius: 10px 10px 0 0; box-shadow: inset 0 0 0 2px rgba(255,255,255,.14); }
+    .pod-c::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 5px; z-index: 1; background: linear-gradient(180deg, #FFE9A8, #B98A3E); }
+    model-viewer::part(default-progress-bar) { display: none; }
+    /* Điện thoại xoay ngang (màn thấp): thu nhỏ linh vật để nút bấm luôn nằm
+       trong khung, tránh hình chiếm hết chỗ. */
+    @media (max-height: 560px) {
+      [data-img] { height: 6rem !important; width: 6rem !important; }
+      main { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+    }
     @media (prefers-reduced-motion: reduce) {
+      .bob, .pulse-soft { animation: none !important; }
       .active\:scale-95:active { transform: none !important; }
     }
   </style>
 
+  <!-- model-viewer: 3D Thần Tài trên podium màn kết thúc. -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script defer src="./app.js"></script>
 </head>
 
-<!-- CLIENT VIEW · mobile controller for one team. Light, tactile, mobile-first. -->
-<body class="flex h-full min-h-[100dvh] flex-col bg-slate-50 font-sans text-slate-900 antialiased">
+<!-- CLIENT VIEW · mobile controller · Tết red & gold. -->
+<body class="flex h-[100dvh] flex-col overflow-hidden font-sans text-[#14110B] antialiased">
+  <div class="tet-bg"></div>
 
-  <!-- Safelist: guarantees the Tailwind Play CDN generates every class the inline
-       script toggles at runtime (dynamic classes can otherwise be missed). -->
-  <div class="hidden bg-blue-600 bg-red-600 bg-white bg-slate-100 bg-slate-200 bg-blue-50 text-white text-slate-900 text-slate-400 text-slate-300 text-blue-600 text-emerald-600 text-red-600 border-blue-600 border-slate-200 border-slate-100 bg-blue-600 bg-emerald-600 bg-amber-500 bg-rose-600"></div>
+  <svg width="0" height="0" class="absolute"><defs>
+    <radialGradient id="coinG" cx="38%" cy="30%" r="80%"><stop offset="0%" stop-color="#FFE9A8"/><stop offset="45%" stop-color="#F4B740"/><stop offset="100%" stop-color="#B8860B"/></radialGradient>
+  </defs></svg>
 
-  <!-- ── TOP STATUS BAR (hidden until joined) ─────────────────────────────── -->
-  <header id="topbar" style="display:none" class="items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-    <div class="flex min-w-0 items-center gap-2">
-      <span id="top-dot" class="h-4 w-4 shrink-0 rounded-md bg-slate-300"></span>
-      <span id="top-name" class="truncate text-base font-black uppercase tracking-wide">Đội</span>
-    </div>
-    <span class="tabular shrink-0 text-lg font-black text-slate-900"><span id="top-score">0</span> <span class="text-blue-600">TỶ</span></span>
-  </header>
-
-  <main class="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-6 pt-6">
+  <main class="mx-auto w-full max-w-md flex-1 min-h-0 overflow-y-auto px-5 pb-4 pt-4 sm:max-w-2xl lg:max-w-4xl">
 
     <!-- ── SCREEN: JOIN ──────────────────────────────────────────────────── -->
-    <section id="screen-join" class="screen flex-1 flex-col justify-center gap-7">
-      <div>
-        <p class="text-xs font-bold uppercase tracking-[0.3em] text-blue-600">Ứng dụng điều khiển</p>
-        <h1 class="mt-1.5 text-[clamp(2.25rem,11vw,3.25rem)] font-black uppercase leading-none tracking-tight text-slate-900">Market Fit</h1>
-        <p class="mt-1.5 text-sm font-bold uppercase tracking-[0.14em] text-slate-500">Độc chiếm thị trường</p>
+    <section id="screen-join" class="screen flex-1 flex-col justify-center gap-5">
+      <div data-img="than-tai-welcome-half.png" data-alt="Thần Tài chào đón" class="mx-auto grid h-56 w-56 place-items-center"></div>
+      <div class="text-center">
+        <p class="text-xs font-semibold uppercase tracking-[0.3em]" style="color:#8A6522">Ứng dụng đội chơi</p>
+        <h1 class="mt-1.5 font-display text-[clamp(2.5rem,13vw,3.75rem)] font-extrabold uppercase leading-none tracking-tight" style="color:#14110B">Market <span style="color:#B98A3E">Fit</span></h1>
+        <p class="mt-1.5 text-sm font-extrabold uppercase tracking-[0.14em]" style="color:#6B6459">Độc chiếm thị trường</p>
       </div>
 
       <div class="flex flex-col gap-3">
-        <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Chọn đội của bạn</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.2em]" style="color:#6B6459">Chọn đội của bạn</p>
         <div id="team-picker" class="grid grid-cols-2 gap-3"></div>
-        <p class="text-xs font-semibold leading-relaxed text-slate-400">Đội còn trống có thể chọn. Lỡ thoát ra? Chọn lại đúng đội cũ, dữ liệu vẫn còn.</p>
+        <p class="text-xs font-medium leading-relaxed" style="color:#A39B8D">Đội còn trống có thể chọn. Lỡ thoát ra? Chọn lại đúng đội cũ, dữ liệu vẫn còn.</p>
       </div>
 
       <div class="flex flex-col gap-2">
-        <label for="join-name" class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Tên đội</label>
+        <label for="join-name" class="text-xs font-semibold uppercase tracking-[0.2em]" style="color:#6B6459">Tên đội</label>
         <input id="join-name" type="text" inputmode="text" autocomplete="off" placeholder="Nhập tên đội"
-               class="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3.5 text-xl font-bold uppercase tracking-wide text-slate-900 outline-none placeholder:font-semibold placeholder:normal-case placeholder:tracking-normal placeholder:text-slate-400 focus:border-blue-600" />
+               class="w-full rounded-xl border px-4 py-3.5 text-xl font-bold uppercase tracking-wide outline-none"
+               style="background:#FFFFFF;border-color:#E7E3DA;color:#14110B" />
       </div>
 
       <button id="join-btn" disabled
-              class="min-h-[56px] w-full rounded-xl bg-slate-200 py-4 text-xl font-black uppercase tracking-widest text-slate-400 transition active:scale-95 touch-manipulation select-none">
+              class="min-h-[56px] w-full rounded-xl py-4 text-xl font-display font-extrabold uppercase tracking-widest transition active:scale-95 touch-manipulation select-none"
+              style="background:#EDEAE3;color:#A39B8D">
         Tham gia
       </button>
     </section>
 
-    <!-- ── SCREEN: WAIT (lobby / between phases / result) ───────────────────── -->
+    <!-- ── SCREEN: WAIT ──────────────────────────────────────────────────── -->
     <section id="screen-wait" class="screen flex-1 flex-col items-center justify-center gap-3 text-center">
-      <span class="grid h-16 w-16 place-items-center rounded-2xl bg-white text-slate-300 shadow-sm ring-1 ring-slate-200">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-8 w-8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-      </span>
-      <p id="wait-title" class="text-3xl font-black uppercase tracking-tight text-slate-900">Đang chờ</p>
-      <p class="tabular text-lg font-black uppercase text-slate-400"><span id="wait-score">0</span> TỶ</p>
+      <div id="wait-tt" data-img="than-tai-idle-half.png" data-alt="Thần Tài" class="grid h-56 w-56 place-items-center"></div>
+      <p id="wait-title" class="font-display text-3xl font-extrabold uppercase tracking-tight" style="color:#14110B">Đang chờ</p>
+      <p class="tabular text-lg font-extrabold uppercase" style="color:#A39B8D"><span id="wait-score">0</span> TỶ</p>
     </section>
 
-    <!-- ── SCREEN: QUIZ (PHASE_1) ───────────────────────────────────────────── -->
+    <!-- ── SCREEN: QUIZ ──────────────────────────────────────────────────── -->
     <section id="screen-quiz" class="screen flex-1 flex-col gap-4">
-      <p class="text-center text-sm font-bold uppercase tracking-[0.2em] text-slate-500">Chọn đáp án</p>
+      <p class="text-center text-sm font-semibold uppercase tracking-[0.2em]" style="color:#6B6459">Chọn đáp án</p>
       <div id="quiz-grid" class="grid flex-1 grid-cols-2 gap-3"></div>
     </section>
 
-    <!-- ── SCREEN: MARKET (PHASE_2) ─────────────────────────────────────────── -->
+    <!-- ── SCREEN: MARKET ────────────────────────────────────────────────── -->
     <section id="screen-market" class="screen flex-1 flex-col justify-center gap-4">
-      <p class="text-center text-sm font-bold uppercase tracking-[0.2em] text-slate-500">Chọn thị trường</p>
+      <p class="text-center text-sm font-semibold uppercase tracking-[0.2em]" style="color:#6B6459">Chọn thị trường</p>
+      <div data-img="than-tai-think-half.png" data-alt="Thần Tài phân vân chọn thị trường" class="mx-auto grid h-40 w-40 place-items-center"></div>
       <div id="market-grid" class="flex flex-col gap-3"></div>
       <button id="market-confirm" disabled
-              class="mt-2 min-h-[56px] w-full rounded-xl bg-slate-200 py-4 text-xl font-black uppercase tracking-widest text-slate-400 transition active:scale-95 touch-manipulation select-none">
+              class="mt-2 min-h-[56px] w-full rounded-xl py-4 text-xl font-display font-extrabold uppercase tracking-widest transition active:scale-95 touch-manipulation select-none"
+              style="background:#EDEAE3;color:#A39B8D">
         Chốt lựa chọn
       </button>
     </section>
 
-    <!-- ── SCREEN: BID (PHASE_3, contenders only) ───────────────────────────── -->
+    <!-- ── SCREEN: BID ───────────────────────────────────────────────────── -->
     <section id="screen-bid" class="screen flex-1 flex-col justify-center gap-5">
-      <div class="rounded-2xl border border-red-200 bg-white p-5 text-center shadow-sm">
-        <p class="text-sm font-bold uppercase tracking-[0.2em] text-red-600">Đấu thầu sinh tử</p>
-        <p class="mt-2 text-lg font-black uppercase text-slate-900">
-          Ngân sách <span id="bid-budget" class="tabular text-red-600">0</span> TỶ
+      <div class="rounded-2xl border p-5 text-center" style="background:#FFFFFF;border-color:#EBD3C9">
+        <p class="text-sm font-semibold uppercase tracking-[0.2em]" style="color:#B0322E">Đấu thầu sinh tử</p>
+        <p class="mt-2 text-lg font-extrabold uppercase" style="color:#14110B">
+          Ngân sách <span id="bid-budget" class="tabular" style="color:#B0322E">0</span> TỶ
         </p>
       </div>
       <input id="bid-input" type="number" min="0" inputmode="numeric" placeholder="0"
-             class="w-full rounded-xl border-2 border-slate-200 bg-white px-5 py-5 text-center text-4xl font-black tabular text-slate-900 outline-none placeholder:text-slate-300 focus:border-red-600" />
-      <p class="text-center text-xs font-semibold text-slate-400">Giá thầu vượt ngân sách sẽ tự động hạ về mức tối đa.</p>
+             class="w-full rounded-xl border px-5 py-5 text-center text-4xl font-extrabold tabular outline-none"
+             style="background:#FFFFFF;border-color:#E7E3DA;color:#14110B" />
+      <p class="text-center text-xs font-medium" style="color:#A39B8D">Giá thầu vượt ngân sách sẽ tự động hạ về mức tối đa.</p>
       <button id="bid-btn"
-              class="min-h-[56px] w-full rounded-xl bg-red-600 py-4 text-xl font-black uppercase tracking-widest text-white transition active:scale-95 touch-manipulation select-none">
+              class="min-h-[56px] w-full rounded-xl py-4 text-xl font-display font-extrabold uppercase tracking-widest text-white transition active:scale-95 touch-manipulation select-none"
+              style="background:#B0322E">
         Chốt thầu
       </button>
     </section>
 
   </main>
 
-  <!-- ── HISTORY PANEL (always visible while playing) ───────────────────────── -->
-  <section id="history-panel" style="display:none" class="shrink-0 border-t border-slate-200 bg-white">
-    <div class="mx-auto w-full max-w-md px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
-      <p class="mb-2 text-xs font-black uppercase tracking-[0.2em] text-slate-400">Quá trình chơi · giờ VN</p>
+  <!-- ── HISTORY PANEL ─────────────────────────────────────────────────────── -->
+  <section id="history-panel" style="display:none;background:#FFFFFF;border-color:#E7E3DA" class="shrink-0 border-t" >
+    <div class="mx-auto w-full max-w-md px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:max-w-2xl lg:max-w-4xl">
+      <p class="mb-2 text-xs font-bold uppercase tracking-[0.2em]" style="color:#A39B8D">Quá trình chơi · giờ VN</p>
       <div id="wallet-list" class="max-h-[30vh] space-y-2 overflow-y-auto"></div>
     </div>
   </section>
 
-  <!-- ── MONEY TOAST (flashes the instant the balance changes) ──────────────── -->
-  <div id="money-toast" style="display:none" class="fixed left-1/2 top-20 z-30 -translate-x-1/2 rounded-xl px-6 py-3 text-2xl font-black tabular text-white shadow-lg"></div>
+  <!-- ── MONEY TOAST ───────────────────────────────────────────────────────── -->
+  <div id="money-toast" style="display:none" class="fixed left-1/2 top-20 z-40 -translate-x-1/2 rounded-xl px-6 py-3 text-2xl font-extrabold tabular shadow-lg"></div>
 
-  <!-- ── LOCK SHIELD (admin-controlled; players cannot dismiss it) ──────────── -->
-  <div id="lock-shield" style="display:none" class="fixed inset-0 z-40 flex-col items-center justify-center bg-slate-900/50 p-6">
-    <div class="flex w-full max-w-xs flex-col items-center gap-4 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-xl">
-      <span class="grid h-16 w-16 place-items-center rounded-2xl bg-blue-50 text-blue-600">
+  <!-- ── LOCK SHIELD ───────────────────────────────────────────────────────── -->
+  <div id="lock-shield" style="display:none" class="fixed inset-0 z-40 flex-col items-center justify-center bg-black/60 p-6">
+    <div class="flex w-full max-w-xs flex-col items-center gap-4 rounded-2xl border p-8 text-center shadow-xl" style="background:#FFFFFF;border-color:#E7E3DA">
+      <span class="grid h-16 w-16 place-items-center rounded-2xl text-white" style="background:#B98A3E">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-8 w-8"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
       </span>
-      <span class="text-2xl font-black uppercase tracking-wide text-slate-900">Admin đã khóa</span>
-      <span class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Vui lòng chờ mở khóa</span>
+      <span class="text-2xl font-display font-extrabold uppercase tracking-wide" style="color:#14110B">Admin đã khóa</span>
+      <span class="text-xs font-semibold uppercase tracking-[0.2em]" style="color:#A39B8D">Vui lòng chờ mở khóa</span>
     </div>
   </div>
 
-  <!-- ── QUIZ RESULT OVERLAY (check / cross) ────────────────────────────────── -->
+  <!-- ── QUIZ RESULT OVERLAY ───────────────────────────────────────────────── -->
   <div id="result-overlay" style="display:none" class="fixed inset-0 z-50 flex-col items-center justify-center gap-6 p-6 text-center">
     <div id="result-icon"></div>
-    <p id="result-title" class="text-5xl font-black uppercase tracking-tight text-white"></p>
-    <p id="result-points" class="tabular text-2xl font-black uppercase text-white"></p>
+    <p id="result-title" class="text-5xl font-display font-extrabold uppercase tracking-tight text-white"></p>
+    <p id="result-points" class="tabular text-2xl font-extrabold uppercase text-white"></p>
+  </div>
+
+  <!-- ── MÀN KẾT THÚC (full-bleed, podium lấp đầy giống projector) ──────────── -->
+  <div id="final-screen" style="display:none;background:#F7F5F0" class="fixed inset-0 z-30 overflow-hidden">
+    <div class="absolute inset-x-0 top-[3vh] z-10 flex flex-col items-center gap-0.5 px-4 text-center">
+      <span class="text-[11px] font-semibold uppercase tracking-[0.3em]" style="color:#8A6522">Công bố kết quả</span>
+      <p class="font-display text-xl font-extrabold uppercase tracking-tight" style="color:#14110B">Nhà vô địch</p>
+      <p class="font-display text-lg font-extrabold uppercase" style="color:#B98A3E"><span id="final-name">…</span></p>
+    </div>
+    <div id="final-podium" class="absolute inset-x-0 bottom-0 flex items-end"></div>
+    <button id="wallet-fab" class="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-20 grid h-12 w-12 place-items-center rounded-full shadow-lg active:scale-95 touch-manipulation" style="background:#B98A3E;color:#fff">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" class="h-6 w-6"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+    </button>
+  </div>
+  <div id="wallet-modal" style="display:none" class="fixed inset-0 z-50 flex-col justify-end bg-black/40">
+    <div class="rounded-t-3xl border-t p-5" style="background:#FFFFFF;border-color:#E7E3DA">
+      <div class="mb-3 flex items-center justify-between">
+        <p class="text-sm font-bold uppercase tracking-[0.2em]" style="color:#A39B8D">Quá trình chơi · giờ VN</p>
+        <button id="wallet-close" class="grid h-9 w-9 place-items-center rounded-full active:scale-95" style="background:#F1EEE6;color:#14110B">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" class="h-5 w-5"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="wallet-modal-body" class="max-h-[56vh] space-y-2 overflow-y-auto"></div>
+    </div>
   </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const { store, team, PHASES, TEAM_IDS, TEAM_META, MARKETS, formatNumber, formatTimeVN } = window.BlueOcean;
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      // Display-name override for markets (keys A/B/C unchanged; app.js untouched).
+      const COLOR = { team1: '#4F46E5', team2: '#059669', team3: '#D97706', team4: '#E11D48' };
       const MARKET_NAME = { A: 'HIỆN CÓ', B: 'NGÁCH', C: 'MỚI' };
+      const COIN = `<svg viewBox="0 0 100 100" class="h-full w-full"><circle cx="50" cy="50" r="47" fill="url(#coinG)" stroke="#8A5A00" stroke-width="3"/><rect x="41" y="41" width="18" height="18" rx="2" fill="#7A5B1E" stroke="#8A5A00" stroke-width="2"/></svg>`;
+
+      /* ── Thần Tài mascot: 3D (.glb) → 2D (.png) → gold-coin fallback.
+         Drop ./assets/than-tai-<scene>.glb / .png in and it appears. */
+      const TT_FALLBACK = `<span class="bob grid h-[80%] w-[80%] place-items-center rounded-full" style="background:radial-gradient(circle at 36% 30%,#FFE9A8,#F4B740 55%,#B8860B);border:3px solid #8A5A00"><span class="font-display text-3xl font-extrabold" style="color:#14110B">₫</span></span>`;
+      const assetExists = (url) => fetch(url, { method: 'HEAD' }).then((r) => r.ok).catch(() => false);
+      const mountTT = async (el) => {
+        const img = el.dataset.img;
+        if (el._ttImg === img) return;
+        el._ttImg = img;
+        el.innerHTML = TT_FALLBACK;
+        if (img && await assetExists(`./assets/${img}`)) el.innerHTML = `<img src="./assets/${img}" alt="${el.dataset.alt || 'Thần Tài'}" style="width:100%;height:100%;object-fit:contain;object-position:bottom" />`;
+      };
+      const waitTT = document.getElementById('wait-tt');
+      document.querySelectorAll('[data-img]').forEach(mountTT);
+
+      /* ── Wallet drawer (menu 3 gạch ở màn kết thúc) ── */
+      const walletList = document.getElementById('wallet-list'), walletHome = walletList.parentElement;
+      const walletFab = document.getElementById('wallet-fab'), walletModal = document.getElementById('wallet-modal'), walletModalBody = document.getElementById('wallet-modal-body');
+      const mainEl = document.querySelector('main'), finalScreen = document.getElementById('final-screen');
+      walletFab.addEventListener('click', () => { walletModal.style.display = 'flex'; });
+      document.getElementById('wallet-close').addEventListener('click', () => { walletModal.style.display = 'none'; });
+      walletModal.addEventListener('click', (e) => { if (e.target === walletModal) walletModal.style.display = 'none'; });
+
+      /* ── FINAL podium (giống projector) ── */
+      const CROWN_C = '<svg viewBox="0 0 24 24" fill="currentColor" class="h-full w-full"><path d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 11H5L3 7z"/></svg>';
+      const renderFinal = () => {
+        const ranked = window.BlueOcean.rankTeams(teamsCache);
+        const champ = ranked[0] || {};
+        document.getElementById('final-name').textContent = champ.name || (champ.id && TEAM_META[champ.id] ? TEAM_META[champ.id].label : '…');
+        const order = [1, 0, 2, 3].filter((i) => ranked[i]);
+        const H = ['40vh', '30vh', '25vh', '22vh'];
+        const TTH = ['clamp(5rem,26vh,20rem)', 'clamp(4.5rem,21vh,16rem)', 'clamp(4rem,19vh,14rem)', 'clamp(3.8rem,17vh,13rem)'];
+        document.getElementById('final-podium').innerHTML = order.map((i) => {
+          const t = ranked[i], rank = i + 1, win = rank === 1, scene = win ? 'cheer' : 'sad';
+          return `<div class="flex flex-1 flex-col items-center justify-end">
+            <div class="relative" style="width:94%;height:${TTH[i]};margin-bottom:-1vh;z-index:2">
+              <model-viewer src="./assets/than-tai-${scene}.glb" poster="./assets/than-tai-${scene}.png" alt="Thần Tài" autoplay disable-zoom interaction-prompt="none" shadow-intensity="0.3" exposure="1.05" camera-orbit="0deg 86deg auto" style="width:100%;height:100%;--poster-color:transparent"></model-viewer>
+            </div>
+            <div class="pod-c flex w-full flex-col items-center justify-between px-1 pt-2 pb-3" style="height:${H[i]};background:linear-gradient(180deg,#E23B3B,#C1121F 34%,#7A0A12)">
+              ${win ? '<span class="grid h-[clamp(1rem,5vw,2rem)] w-[clamp(1rem,5vw,2rem)] place-items-center" style="color:#FFE08A">' + CROWN_C + '</span>' : '<span></span>'}
+              <div class="flex flex-col items-center leading-tight">
+                <span class="font-display text-[clamp(0.7rem,3.4vw,1.4rem)] font-extrabold uppercase text-white text-center">${t.name || TEAM_META[t.id].label}</span>
+                <span class="font-display text-[clamp(0.62rem,2.8vw,1.1rem)] font-extrabold tabular-nums text-white/85">${formatNumber(t.score)} TỶ</span>
+              </div>
+              <span class="font-display text-[clamp(1.8rem,8vw,4rem)] font-extrabold text-white/95">${rank}</span>
+            </div>
+          </div>`;
+        }).join('');
+      };
 
       let myTeamId = localStorage.getItem('bo_team') || null;
-      let pickedTeamId = null;
-      let stateCache = {};
-      let teamsCache = {};
-      let joined = false;            // claimed a slot in THIS session
-      let joinedSession = null;      // state.session at join time (reset detector)
-      let lastKey = null;            // phase(+contender) resets locks between rounds
-      let quizInit = false;          // skip stale quizResult on first load
-      let lastQuizAt = 0;
-      let prefilledName = false;
-      let lastScore = null;          // money-toast delta detector
-      let moneyTimer = null;
-      let walletInit = false;        // skip animating the history on first load
-      let lastWalletAt = 0;
+      let pickedTeamId = null, stateCache = {}, teamsCache = {};
+      let joined = false, joinedSession = null, lastKey = null;
+      let quizInit = false, lastQuizAt = 0, prefilledName = false;
+      let lastScore = null, moneyTimer = null, walletInit = false, lastWalletAt = 0;
 
       const $ = (id) => document.getElementById(id);
+
+      // Bố cục căn-giữa-hoặc-cuộn nằm hoàn toàn trong CSS (.screen.is-active +
+      // main overflow-y-auto), nên đổi màn chỉ cần bật/tắt is-active.
       const showScreen = (id) => {
         document.querySelectorAll('.screen').forEach((el) => el.classList.toggle('is-active', el.id === id));
       };
 
-      /* Primary CTA enabled/disabled visual (light: accent when ready, muted when not). */
-      const setCTA = (btn, enabled, accent) => {
-        btn.disabled = !enabled;
-        btn.classList.toggle(accent, enabled);
-        btn.classList.toggle('text-white', enabled);
-        btn.classList.toggle('bg-slate-200', !enabled);
-        btn.classList.toggle('text-slate-400', !enabled);
+      /* coin burst (delight on gain/join) */
+      const coinBurst = (n = 16) => {
+        if (reduceMotion) return;
+        for (let i = 0; i < n; i += 1) {
+          const s = 16 + Math.floor(Math.random() * 22);
+          const c = document.createElement('div');
+          c.className = 'coin-drop';
+          c.style.cssText = `left:${Math.random() * 100}%;width:${s}px;height:${s}px;animation-duration:${1.6 + Math.random() * 1.6}s;animation-delay:${Math.random() * 0.4}s`;
+          c.innerHTML = COIN;
+          document.body.appendChild(c);
+          setTimeout(() => c.remove(), 3600);
+        }
       };
 
-      /* ── quiz lock / unlock (light: chosen = blue "ĐÃ CHỐT", others = muted) ── */
+      /* primary CTA enabled/disabled (gold when ready, muted when not) */
+      const setCTA = (btn, enabled) => {
+        btn.disabled = !enabled;
+        btn.style.background = enabled ? '#B98A3E' : '#EDEAE3';
+        btn.style.color = enabled ? '#FFFFFF' : '#A39B8D';
+      };
+
+      /* ── quiz lock/unlock ── */
       const lockGroup = (buttons, chosen) => {
         buttons.forEach((b) => {
           b.disabled = true;
-          b.classList.remove('bg-white', 'text-slate-900', 'border-slate-200', 'bg-blue-600', 'text-white', 'border-blue-600');
           const l = b.querySelector('[data-label]');
-          if (b === chosen) {
-            b.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
-            if (l) { l.textContent = 'ĐÃ CHỐT'; l.style.fontSize = '1.5rem'; }
-          } else {
-            b.classList.add('bg-slate-100', 'text-slate-300', 'border-slate-200');
-          }
+          if (b === chosen) { b.style.background = '#B98A3E'; b.style.borderColor = '#B98A3E'; b.style.color = '#FFFFFF'; if (l) { l.textContent = 'ĐÃ CHỐT'; l.style.fontSize = '1.5rem'; } }
+          else { b.style.background = '#F1EEE6'; b.style.borderColor = '#E7E3DA'; b.style.color = '#C9C2B4'; }
         });
       };
       const unlockGroup = (buttons) => {
         buttons.forEach((b) => {
-          b.disabled = false;
-          b.classList.remove('bg-slate-100', 'text-slate-300', 'bg-blue-600', 'text-white', 'border-blue-600');
-          b.classList.add('bg-white', 'text-slate-900', 'border-slate-200');
+          b.disabled = false; b.style.background = '#FFFFFF'; b.style.borderColor = '#E7E3DA'; b.style.color = '#14110B';
           const l = b.querySelector('[data-label]');
           if (l && b.dataset.text) { l.textContent = b.dataset.text; l.style.fontSize = ''; }
         });
       };
 
-      /* ── JOIN ──────────────────────────────────────────────────────────── */
-      const picker = $('team-picker');
-      const joinBtn = $('join-btn');
-      const joinName = $('join-name');
-
+      /* ── JOIN ── */
+      const picker = $('team-picker'), joinBtn = $('join-btn'), joinName = $('join-name');
       const renderPicker = () => {
         picker.innerHTML = TEAM_IDS.map((id) => {
-          const t = teamsCache[id] || {};
-          const takenByOther = t.online === true && id !== myTeamId;
-          const active = id === pickedTeamId;
-          let cls;
-          if (takenByOther) cls = 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed';
-          else if (active) cls = `${TEAM_META[id].bg} text-white border-transparent`;
-          else cls = 'bg-white text-slate-900 border-slate-200';
+          const t = teamsCache[id] || {}, takenByOther = t.online === true && id !== myTeamId, active = id === pickedTeamId;
+          let bg, bd, fg, sfg;
+          if (takenByOther) { bg = '#F1EEE6'; bd = '#E7E3DA'; fg = '#A39B8D'; sfg = '#B7AF9F'; }
+          else if (active) { bg = COLOR[id]; bd = COLOR[id]; fg = '#ffffff'; sfg = '#ffffffcc'; }
+          else { bg = '#FFFFFF'; bd = '#E7E3DA'; fg = '#14110B'; sfg = '#A39B8D'; }
           const sub = takenByOther ? 'ĐANG CHƠI' : (t.ready && t.name ? t.name : 'CÒN TRỐNG');
-          const subCls = active ? 'text-white/80' : (takenByOther ? 'text-slate-400' : 'text-slate-400');
           return `<button data-team="${id}" ${takenByOther ? 'disabled' : ''}
-            class="flex min-h-[64px] flex-col items-center justify-center gap-0.5 rounded-xl border-2 ${cls} px-3 py-3 text-lg font-black uppercase tracking-wide transition active:scale-95 touch-manipulation select-none">
+            class="flex min-h-[64px] flex-col items-center justify-center gap-0.5 rounded-xl border-2 px-3 py-3 font-display text-lg font-extrabold uppercase tracking-wide transition active:scale-95 touch-manipulation select-none"
+            style="background:${bg};border-color:${bd};color:${fg}">
             <span>${TEAM_META[id].label}</span>
-            <span class="truncate text-[10px] font-bold ${subCls}">${sub}</span>
+            <span class="truncate text-[10px] font-bold" style="color:${sfg}">${sub}</span>
           </button>`;
         }).join('');
       };
-      const refreshJoinBtn = () => {
-        const ok = !!(pickedTeamId && joinName.value.trim().length > 0);
-        setCTA(joinBtn, ok, 'bg-blue-600');
-      };
-
+      const refreshJoinBtn = () => setCTA(joinBtn, !!(pickedTeamId && joinName.value.trim().length > 0));
       picker.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-team]');
         if (!btn || btn.disabled) return;
-        pickedTeamId = btn.dataset.team;
-        renderPicker();
-        refreshJoinBtn();
+        pickedTeamId = btn.dataset.team; renderPicker(); refreshJoinBtn();
       });
       joinName.addEventListener('input', refreshJoinBtn);
       joinBtn.addEventListener('click', async () => {
         if (joinBtn.disabled) return;
-        myTeamId = pickedTeamId;
-        localStorage.setItem('bo_team', myTeamId);
+        myTeamId = pickedTeamId; localStorage.setItem('bo_team', myTeamId);
         await team.join(myTeamId, joinName.value.trim());
-        joined = true;
-        joinedSession = stateCache.session || null;
-        render();
+        joined = true; joinedSession = stateCache.session || null; coinBurst(20); render();
       });
 
-      /* ── QUIZ ──────────────────────────────────────────────────────────── */
+      /* ── QUIZ ── */
       const quizGrid = $('quiz-grid');
       quizGrid.innerHTML = ['A', 'B', 'C', 'D'].map((opt) => `
         <button data-opt="${opt}" data-text="${opt}"
-          class="flex min-h-[22vh] items-center justify-center rounded-xl border-2 border-slate-200 bg-white text-slate-900 transition active:scale-95 touch-manipulation select-none">
-          <span data-label class="text-[clamp(2.75rem,15vw,4.5rem)] font-black leading-none">${opt}</span>
+          class="flex min-h-[22vh] items-center justify-center rounded-xl border-2 transition active:scale-95 touch-manipulation select-none"
+          style="background:#FFFFFF;border-color:#E7E3DA;color:#14110B">
+          <span data-label class="font-display text-[clamp(2.75rem,15vw,4.5rem)] font-extrabold leading-none">${opt}</span>
         </button>`).join('');
       const quizButtons = Array.from(quizGrid.querySelectorAll('button'));
       quizGrid.addEventListener('click', async (e) => {
@@ -272,57 +362,38 @@
         lockGroup(quizButtons, btn);
       });
 
-      /* ── MARKET (free re-tap; confirm to lock) ──────────────────────────── */
-      const marketGrid = $('market-grid');
-      const marketConfirm = $('market-confirm');
-      let selectedMarket = null;
-      let marketLocked = false;
-
-      const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 shrink-0"><polyline points="20 6 9 17 4 12"/></svg>';
+      /* ── MARKET ── */
+      const marketGrid = $('market-grid'), marketConfirm = $('market-confirm');
+      let selectedMarket = null, marketLocked = false;
+      const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 shrink-0"><polyline points="20 6 9 17 4 12"/></svg>';
       const renderMarketGrid = () => {
         marketGrid.innerHTML = ['A', 'B', 'C'].map((key) => {
-          const name = MARKET_NAME[key] || (MARKETS[key] && MARKETS[key].name) || key;
-          const sel = key === selectedMarket;
-          let cls;
-          if (marketLocked) cls = sel ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-100 text-slate-300 border-slate-200';
-          else cls = sel ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-900 border-slate-200';
+          const name = MARKET_NAME[key] || (MARKETS[key] && MARKETS[key].name) || key, sel = key === selectedMarket;
+          let bg, bd, fg;
+          if (sel) { bg = '#B98A3E'; bd = '#B98A3E'; fg = '#FFFFFF'; }
+          else if (marketLocked) { bg = '#F1EEE6'; bd = '#E7E3DA'; fg = '#C9C2B4'; }
+          else { bg = '#FFFFFF'; bd = '#E7E3DA'; fg = '#14110B'; }
           return `<button data-market="${key}" ${marketLocked ? 'disabled' : ''}
-            class="flex min-h-[60px] items-center justify-center gap-2 rounded-xl border-2 ${cls} px-4 py-4 text-xl font-black uppercase tracking-widest transition active:scale-95 touch-manipulation select-none">
-            ${sel ? CHECK_SVG : ''}<span>${name}</span>
-          </button>`;
+            class="flex min-h-[60px] items-center justify-center gap-2 rounded-xl border-2 px-4 py-4 font-display text-xl font-extrabold uppercase tracking-widest transition active:scale-95 touch-manipulation select-none"
+            style="background:${bg};border-color:${bd};color:${fg}">${sel ? CHECK : ''}<span>${name}</span></button>`;
         }).join('');
       };
-      const refreshMarketConfirm = () => {
-        const ok = !!(selectedMarket && !marketLocked);
-        setCTA(marketConfirm, ok, 'bg-blue-600');
-      };
-      const resetMarket = () => {
-        selectedMarket = null;
-        marketLocked = false;
-        marketConfirm.textContent = 'Chốt lựa chọn';
-        renderMarketGrid();
-        refreshMarketConfirm();
-      };
+      const refreshMarketConfirm = () => setCTA(marketConfirm, !!(selectedMarket && !marketLocked));
+      const resetMarket = () => { selectedMarket = null; marketLocked = false; marketConfirm.textContent = 'Chốt lựa chọn'; renderMarketGrid(); refreshMarketConfirm(); };
       marketGrid.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-market]');
         if (!btn || marketLocked) return;
-        selectedMarket = btn.dataset.market; // free re-tap until confirmed
-        renderMarketGrid();
-        refreshMarketConfirm();
+        selectedMarket = btn.dataset.market; renderMarketGrid(); refreshMarketConfirm();
       });
       marketConfirm.addEventListener('click', async () => {
         if (marketConfirm.disabled || !selectedMarket) return;
         await team.chooseMarket(myTeamId, selectedMarket);
-        marketLocked = true;
-        renderMarketGrid();
-        setCTA(marketConfirm, false, 'bg-blue-600');
-        marketConfirm.textContent = 'ĐÃ CHỐT';
+        marketLocked = true; renderMarketGrid(); setCTA(marketConfirm, false); marketConfirm.textContent = 'ĐÃ CHỐT';
       });
       resetMarket();
 
-      /* ── BID ───────────────────────────────────────────────────────────── */
-      const bidInput = $('bid-input');
-      const bidBtn = $('bid-btn');
+      /* ── BID ── */
+      const bidInput = $('bid-input'), bidBtn = $('bid-btn');
       bidBtn.addEventListener('click', async () => {
         if (bidBtn.disabled) return;
         const budget = teamsCache[myTeamId] ? Number(teamsCache[myTeamId].score) || 0 : 0;
@@ -330,146 +401,84 @@
         if (Number.isNaN(amount) || amount < 0) amount = 0;
         if (amount > budget) amount = budget;
         await team.placeBid(myTeamId, amount);
-        bidInput.disabled = true;
-        bidBtn.disabled = true;
-        bidBtn.classList.remove('bg-red-600', 'text-white');
-        bidBtn.classList.add('bg-slate-200', 'text-slate-400');
+        bidInput.disabled = true; bidBtn.disabled = true;
+        bidBtn.style.background = '#EDEAE3'; bidBtn.style.color = '#A39B8D'; bidBtn.style.borderColor = '#EDEAE3';
         bidBtn.textContent = 'ĐÃ CHỐT';
       });
       const resetBid = () => {
-        bidInput.disabled = false;
-        bidInput.value = '';
-        bidBtn.disabled = false;
-        bidBtn.classList.remove('bg-slate-200', 'text-slate-400');
-        bidBtn.classList.add('bg-red-600', 'text-white');
+        bidInput.disabled = false; bidInput.value = ''; bidBtn.disabled = false;
+        bidBtn.style.background = '#B0322E'; bidBtn.style.color = '#FFFFFF'; bidBtn.style.borderColor = '#B0322E';
         bidBtn.textContent = 'Chốt thầu';
       };
 
-      /* ── LOCK (admin-controlled accidental-tap guard) ──────────────────── */
+      /* ── LOCK SHIELD ── */
       const lockShield = $('lock-shield');
       const interactivePhase = () => [PHASES.ACCUMULATION, PHASES.BLUE_OCEAN, PHASES.SUDDEN_DEATH].includes(stateCache.currentPhase);
-      const applyLockShield = () => {
-        const on = stateCache.locked === true && joined && interactivePhase();
-        // Inline display is reliable; the Play CDN can miss dynamically-added
-        // flex/hidden classes.
-        lockShield.style.display = on ? 'flex' : 'none';
-      };
+      const applyLockShield = () => { lockShield.style.display = (stateCache.locked === true && joined && interactivePhase()) ? 'flex' : 'none'; };
 
-      /* ── QUIZ RESULT OVERLAY ───────────────────────────────────────────── */
+      /* ── RESULT OVERLAY ── */
       const SVG_CHECK = '<svg viewBox="0 0 120 120" class="h-36 w-36"><circle cx="60" cy="60" r="54" fill="none" stroke="white" stroke-width="6" opacity="0.4"/><path class="draw-path" d="M34 62 L54 82 L88 40" fill="none" stroke="white" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       const SVG_CROSS = '<svg viewBox="0 0 120 120" class="h-36 w-36"><circle cx="60" cy="60" r="54" fill="none" stroke="white" stroke-width="6" opacity="0.4"/><path class="draw-path" d="M40 40 L80 80" fill="none" stroke="white" stroke-width="9" stroke-linecap="round"/><path class="draw-path" d="M80 40 L40 80" fill="none" stroke="white" stroke-width="9" stroke-linecap="round"/></svg>';
       const overlay = $('result-overlay');
       let resultTimer = null;
       const showResult = (qr) => {
         const correct = !!qr.correct;
-        overlay.style.background = correct ? '#059669' : '#dc2626';
+        overlay.style.background = correct ? '#059669' : '#B0322E';
         $('result-icon').innerHTML = correct ? SVG_CHECK : SVG_CROSS;
         $('result-title').textContent = correct ? 'CHÍNH XÁC' : 'CHƯA ĐÚNG';
         $('result-points').textContent = correct && qr.points ? `+${formatNumber(qr.points)} TỶ` : '';
-        overlay.style.display = 'flex';
-        overlay.classList.add(correct ? 'result-pop' : 'result-shake');
+        overlay.style.display = 'flex'; overlay.classList.add(correct ? 'result-pop' : 'result-shake');
+        if (correct) coinBurst(18);
         clearTimeout(resultTimer);
-        resultTimer = setTimeout(() => {
-          overlay.style.display = 'none';
-          overlay.classList.remove('result-pop', 'result-shake');
-          // Result shown → re-open the answer buttons for the next question.
-          unlockGroup(quizButtons);
-        }, 3000);
+        resultTimer = setTimeout(() => { overlay.style.display = 'none'; overlay.classList.remove('result-pop', 'result-shake'); unlockGroup(quizButtons); }, 3000);
       };
 
-      /* ── WALLET HISTORY ────────────────────────────────────────────────── */
+      /* ── WALLET ── */
       const renderWallet = () => {
         const log = (teamsCache[myTeamId] && teamsCache[myTeamId].log) || {};
-        const rows = Object.values(log)
-          .filter((e) => e && e.at)
-          .sort((a, b) => Number(b.at) - Number(a.at));
+        const rows = Object.values(log).filter((e) => e && e.at).sort((a, b) => Number(b.at) - Number(a.at));
         const list = $('wallet-list');
-        if (!rows.length) {
-          list.innerHTML = '<p class="py-6 text-center text-sm font-semibold text-slate-400">Chưa có giao dịch</p>';
-          walletInit = true;
-          lastWalletAt = 0;
-          return;
-        }
+        if (!rows.length) { list.innerHTML = '<p class="py-6 text-center text-sm font-semibold" style="color:#A39B8D">Chưa có giao dịch</p>'; walletInit = true; lastWalletAt = 0; return; }
         list.innerHTML = rows.map((e) => {
-          const amt = Number(e.amount);
-          const tone = amt > 0 ? 'text-emerald-600' : (amt < 0 ? 'text-red-600' : 'text-slate-400');
-          const sign = amt > 0 ? '+' : '';
-          return `<div class="flex items-center justify-between border-b border-slate-100 pb-2">
-            <div class="min-w-0">
-              <p class="truncate text-sm font-bold uppercase text-slate-700">${e.note || 'Giao dịch'}</p>
-              <p class="text-xs font-semibold text-slate-400">${formatTimeVN(e.at)}</p>
-            </div>
-            <p class="tabular shrink-0 text-lg font-black ${tone}">${sign}${formatNumber(amt)} TỶ</p>
+          const amt = Number(e.amount), tone = amt > 0 ? '#059669' : (amt < 0 ? '#B0322E' : '#A39B8D'), sign = amt > 0 ? '+' : '';
+          return `<div class="flex items-center justify-between border-b pb-2" style="border-color:#EDE8DE">
+            <div class="min-w-0"><p class="truncate text-sm font-bold uppercase" style="color:#14110B">${e.note || 'Giao dịch'}</p><p class="text-xs font-semibold" style="color:#A39B8D">${formatTimeVN(e.at)}</p></div>
+            <p class="tabular shrink-0 text-lg font-extrabold" style="color:${tone}">${sign}${formatNumber(amt)} TỶ</p>
           </div>`;
         }).join('');
-
-        // Highlight a freshly-added entry so the real-time addition is obvious.
         const topAt = Number(rows[0].at) || 0;
         if (!walletInit) { walletInit = true; lastWalletAt = topAt; }
-        else if (topAt && topAt !== lastWalletAt) {
-          lastWalletAt = topAt;
-          if (list.firstElementChild) list.firstElementChild.classList.add('anim-rise');
-          list.scrollTop = 0;
-        }
+        else if (topAt && topAt !== lastWalletAt) { lastWalletAt = topAt; if (list.firstElementChild) list.firstElementChild.classList.add('bob'); list.scrollTop = 0; }
       };
 
       const showMoneyToast = (delta) => {
         if (!delta) return;
         const el = $('money-toast');
         el.textContent = `${delta > 0 ? '+' : ''}${formatNumber(delta)} TỶ`;
-        el.style.background = delta >= 0 ? '#059669' : '#dc2626';
-        el.style.display = 'block';
-        el.classList.remove('anim-pop');
-        void el.offsetWidth; // restart animation
-        el.classList.add('anim-pop');
-        clearTimeout(moneyTimer);
-        moneyTimer = setTimeout(() => { el.style.display = 'none'; }, 1600);
+        if (delta >= 0) { el.style.background = '#B98A3E'; el.style.color = '#FFFFFF'; coinBurst(14); }
+        else { el.style.background = '#B0322E'; el.style.color = '#FFFFFF'; }
+        el.style.display = 'block'; el.classList.remove('anim-pop'); void el.offsetWidth; el.classList.add('anim-pop');
+        clearTimeout(moneyTimer); moneyTimer = setTimeout(() => { el.style.display = 'none'; }, 1600);
       };
 
-      /* ── TOP BAR ───────────────────────────────────────────────────────── */
+      /* ── TOP BAR ── */
       const renderTopBar = () => {
-        const t = teamsCache[myTeamId] || {};
-        $('topbar').style.display = joined ? 'flex' : 'none';
         $('history-panel').style.display = joined ? 'block' : 'none';
-        if (!joined) return;
-        $('top-dot').className = `h-4 w-4 shrink-0 rounded-md ${TEAM_META[myTeamId].bg}`;
-        $('top-name').textContent = t.name || TEAM_META[myTeamId].label;
-        $('top-score').textContent = formatNumber(t.score || 0);
       };
 
-      /* ── ROUTER ────────────────────────────────────────────────────────── */
+      /* ── ROUTER ── */
       const render = () => {
-        // Reset detector: session changed after we joined → drop to team-select.
-        if (joined && stateCache.session && stateCache.session !== joinedSession) {
-          joined = false;
-          prefilledName = false;
-        }
-
+        if (joined && stateCache.session && stateCache.session !== joinedSession) { joined = false; prefilledName = false; }
         if (!joined) {
-          if (!pickedTeamId && myTeamId && !(teamsCache[myTeamId] && teamsCache[myTeamId].online)) {
-            pickedTeamId = myTeamId;
-          }
-          if (!prefilledName && myTeamId && teamsCache[myTeamId] && teamsCache[myTeamId].name
-              && teamsCache[myTeamId].name !== TEAM_META[myTeamId].label) {
-            joinName.value = teamsCache[myTeamId].name;
-            prefilledName = true;
-          }
-          renderPicker();
-          refreshJoinBtn();
-          renderTopBar();
-          showScreen('screen-join');
-          return;
+          if (!pickedTeamId && myTeamId && !(teamsCache[myTeamId] && teamsCache[myTeamId].online)) pickedTeamId = myTeamId;
+          if (!prefilledName && myTeamId && teamsCache[myTeamId] && teamsCache[myTeamId].name && teamsCache[myTeamId].name !== TEAM_META[myTeamId].label) { joinName.value = teamsCache[myTeamId].name; prefilledName = true; }
+          renderPicker(); refreshJoinBtn(); renderTopBar(); showScreen('screen-join'); return;
         }
+        renderTopBar(); renderWallet();
 
-        renderTopBar();
-        renderWallet();
-
-        // Money toast - flash the delta the instant the balance changes.
         const sc = Number((teamsCache[myTeamId] || {}).score) || 0;
-        if (lastScore === null) lastScore = sc;
-        else if (sc !== lastScore) { showMoneyToast(sc - lastScore); lastScore = sc; }
+        if (lastScore === null) lastScore = sc; else if (sc !== lastScore) { showMoneyToast(sc - lastScore); lastScore = sc; }
 
-        // Fire quiz result overlay on change (skip the stale value at first load).
         const qr = teamsCache[myTeamId] && teamsCache[myTeamId].quizResult;
         if (!quizInit) { lastQuizAt = qr && qr.at ? Number(qr.at) : 0; quizInit = true; }
         else if (qr && qr.at && Number(qr.at) !== lastQuizAt) { lastQuizAt = Number(qr.at); showResult(qr); }
@@ -477,46 +486,37 @@
         const phase = stateCache.currentPhase || PHASES.LOBBY;
         const isContender = Array.isArray(stateCache.suddenDeathTeams) && stateCache.suddenDeathTeams.includes(myTeamId);
         const key = `${phase}:${isContender}`;
-        if (key !== lastKey) {
-          unlockGroup(quizButtons);
-          resetMarket();
-          resetBid();
-          lastKey = key;
-        }
+        if (key !== lastKey) { unlockGroup(quizButtons); resetMarket(); resetBid(); lastKey = key; if (phase === PHASES.VICTORY) coinBurst(40); }
         applyLockShield();
 
-        const setWait = (title, accent) => {
-          const el = $('wait-title');
-          el.textContent = title;
-          el.classList.toggle('text-blue-600', accent === 'blue');
-          el.classList.toggle('text-slate-900', accent !== 'blue');
+        const setWait = (title, gold) => {
+          const el = $('wait-title'); el.textContent = title; el.style.color = gold ? '#B98A3E' : '#14110B';
           $('wait-score').textContent = formatNumber((teamsCache[myTeamId] && teamsCache[myTeamId].score) || 0);
         };
-
         switch (phase) {
-          case PHASES.ACCUMULATION:
-            showScreen('screen-quiz');
-            break;
-          case PHASES.BLUE_OCEAN:
-            showScreen('screen-market');
-            break;
+          case PHASES.ACCUMULATION: showScreen('screen-quiz'); break;
+          case PHASES.BLUE_OCEAN: showScreen('screen-market'); break;
           case PHASES.SUDDEN_DEATH:
-            if (isContender) {
-              const budget = teamsCache[myTeamId] ? Number(teamsCache[myTeamId].score) || 0 : 0;
-              $('bid-budget').textContent = formatNumber(budget);
-              bidInput.max = budget;
-              showScreen('screen-bid');
-            } else { setWait('Đã bị loại'); showScreen('screen-wait'); }
+            if (isContender) { const budget = teamsCache[myTeamId] ? Number(teamsCache[myTeamId].score) || 0 : 0; $('bid-budget').textContent = formatNumber(budget); bidInput.max = budget; showScreen('screen-bid'); }
+            else { setWait('Đã bị loại'); showScreen('screen-wait'); }
             break;
-          case PHASES.VICTORY:
-            setWait(stateCache.winner === myTeamId ? 'Vô địch' : 'Kết thúc', stateCache.winner === myTeamId ? 'blue' : '');
-            showScreen('screen-wait');
-            break;
-          default: // LOBBY, PHASE_3_CHECK
-            setWait('Đang chờ');
-            showScreen('screen-wait');
-            break;
+          case PHASES.VICTORY: renderFinal(); break;
+          default: setWait('Đang chờ'); showScreen('screen-wait'); break;
         }
+        if (waitTT && phase !== PHASES.VICTORY) {
+          let img = 'than-tai-idle-half.png';
+          if (phase === PHASES.SUDDEN_DEATH && !isContender) img = 'than-tai-sad-half.png';
+          if (waitTT.dataset.img !== img) waitTT.dataset.img = img;
+          mountTT(waitTT);
+        }
+
+        // Màn kết thúc: ẩn panel lịch sử dưới, hiện nút 3 gạch mở drawer.
+        const isFinal = phase === PHASES.VICTORY;
+        $('history-panel').style.display = (joined && !isFinal) ? 'block' : 'none';
+        finalScreen.style.display = (joined && isFinal) ? 'block' : 'none';
+        mainEl.style.display = (joined && isFinal) ? 'none' : 'flex';
+        if (isFinal) { if (walletList.parentElement !== walletModalBody) walletModalBody.appendChild(walletList); }
+        else { if (walletList.parentElement !== walletHome) walletHome.appendChild(walletList); walletModal.style.display = 'none'; }
       };
 
       store.onState((s) => { stateCache = s; render(); });

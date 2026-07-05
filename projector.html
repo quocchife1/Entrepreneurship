@@ -3,269 +3,336 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#f8fafc" />
+  <meta name="theme-color" content="#F7F5F0" />
   <title>MARKET FIT · Màn chiếu</title>
 
-  <!-- Inter: the neutral Stripe/Vercel-light choice, best Vietnamese diacritic
-       legibility at projector distance. Local tool, not a shipped SaaS surface. -->
+  <!-- Baloo 2 (rounded festive display, full Vietnamese) + Inter (numbers). -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@600;700;800;900&display=swap" rel="stylesheet" />
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
-        },
-      },
+      theme: { extend: {
+        fontFamily: { display: ['"Baloo 2"', 'ui-sans-serif', 'system-ui', 'sans-serif'], sans: ['Inter', 'ui-sans-serif', 'sans-serif'] },
+      } },
     };
   </script>
 
   <link rel="stylesheet" href="./style.css" />
-
-  <!-- GSAP: isolated to the Sudden-Death bid-roll only. Loaded before the inline
-       script so `gsap` exists on DOMContentLoaded. -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-
+  <!-- model-viewer: renders the 3D Thần Tài (.glb) on the victory podium. -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script defer src="./app.js"></script>
 
   <style>
-    /* Each screen centers a single .fit wrapper. A JS scaler shrinks .fit with a
-       transform so its content ALWAYS fits both width and height of any projector
-       (16:9, 16:10, 4:3, ultrawide) with zero clipping and zero scrollbars. */
+    :root {
+      --bg:#F7F5F0; --surface:#FFFFFF; --line:#E7E3DA; --track:#F1EEE6;
+      --ink:#14110B; --sub:#6B6459; --muted:#A39B8D;
+      --gold:#B98A3E; --gold-lo:#D4A85A; --gold-hi:#8A6522; --gold-tint:rgba(185,138,62,.12);
+    }
+
+    /* ── Ivory stage: warm off-white + whisper-subtle motif (gọn, hiện đại). */
+    .tet-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden;
+      background: radial-gradient(120% 90% at 50% -10%, #FCFBF7 0%, #F7F5F0 55%, #F1EEE6 100%); }
+    .tet-bg::before { content: ""; position: absolute; inset: 0; opacity: 0.05;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cg fill='none' stroke='%23B98A3E' stroke-width='1.6'%3E%3Ccircle cx='24' cy='24' r='10'/%3E%3Ccircle cx='72' cy='72' r='10'/%3E%3C/g%3E%3C/svg%3E");
+      background-size: 96px 96px; }
+
+    /* Floating background coins drifting up. */
+    .float-coins { position: absolute; inset: 0; overflow: hidden; }
+    @keyframes coin-rise { 0% { transform: translateY(10vh) rotate(0deg); opacity: 0; } 12% { opacity: .5; } 100% { transform: translateY(-115vh) rotate(320deg); opacity: 0; } }
+
+    /* ── 3D spinning coin. */
+    .coin3d { perspective: 700px; display: inline-block; }
+    .coin3d > .cin { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; animation: coin-spin 3.2s linear infinite; }
+    @keyframes coin-spin { from { transform: rotateY(0); } to { transform: rotateY(360deg); } }
+    .coin-face { position: absolute; inset: 0; backface-visibility: hidden; }
+    .coin-face.back { transform: rotateY(180deg); }
+    @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-1.4vh); } }
+    .bob { animation: bob 3s ease-in-out infinite; }
+    .bob-2 { animation: bob 3.6s ease-in-out infinite; }
+
+    /* Ingot shine sweep. */
+    .shine { position: relative; overflow: hidden; }
+    .shine::after { content: ""; position: absolute; inset: 0; transform: translateX(-140%) skewX(-18deg);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent); animation: sweep 3.4s ease-in-out infinite; }
+    @keyframes sweep { 0% { transform: translateX(-140%) skewX(-18deg); } 55%,100% { transform: translateX(240%) skewX(-18deg); } }
+
+    /* Sparkle twinkle. */
+    @keyframes twinkle { 0%,100% { opacity: .2; transform: scale(.6); } 50% { opacity: 1; transform: scale(1); } }
+    .twinkle { animation: twinkle 1.8s ease-in-out infinite; }
+
+    /* Coin rain (JS-spawned). */
+    .coin-drop { position: absolute; top: -8vh; pointer-events: none; will-change: transform; animation: coin-fall linear infinite; }
+    .coin-drop svg { display: block; width: 100%; height: auto; filter: drop-shadow(0 3px 4px rgba(0,0,0,.28)); }
+    @keyframes coin-fall { 0% { transform: translateY(0) rotate(-10deg); } 100% { transform: translateY(120vh) rotate(350deg); } }
+
+    /* ── Victory podium: full-width tiered 3D blocks (touching), themed. */
+    .tt3d { position: relative; }
+    .tt3d model-viewer { width: 100%; height: 100%; background: transparent; }
+    /* Ẩn thanh xám (progress bar) của mọi model-viewer lúc tải GLB. */
+    model-viewer::part(default-progress-bar) { display: none; }
+    .pod-front { position: relative; width: 100%; overflow: hidden; border-radius: 12px 12px 0 0;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.14); }
+    .pod-front::before { content: ""; position: absolute; top: 0; right: 0; width: 20%; height: 100%; background: rgba(0,0,0,.13); } /* mặt bên (3D) */
+    .pod-front::after { content: ""; position: absolute; inset: 0; opacity: .10; /* hoa văn xu */
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='2'%3E%3Ccircle cx='16' cy='16' r='8'/%3E%3Ccircle cx='48' cy='48' r='8'/%3E%3C/g%3E%3C/svg%3E");
+      background-size: 64px 64px; }
+    .pod-cap { position: absolute; top: 0; left: 0; right: 0; height: clamp(0.6rem, 1.3vh, 1.1rem); z-index: 2;
+      background: linear-gradient(180deg, #FFE9A8, #D4A85A 55%, #B98A3E); box-shadow: 0 3px 8px -3px rgba(0,0,0,.32); }
+    .pod-champ { box-shadow: inset 0 0 0 3px #E8C98A, 0 -20px 34px -18px rgba(185,138,62,.55); }
+    .pod-rank { font-family: "Baloo 2", sans-serif; font-weight: 800; line-height: 1; font-size: clamp(2.4rem, 7vw, 6.5rem); }
+
+    /* ── Fit + fluid. */
     .screen-wrap { overflow: hidden; }
     .fit { transform-origin: center center; will-change: transform; }
-
-    /* Container-query context: numbers scale to their own cell width via cqi. */
     .cq { container-type: inline-size; }
+    .fluid-brand { font-size: clamp(3rem, 11vw, 11rem); line-height: 0.86; letter-spacing: -0.02em; }
+    .fluid-h2 { font-size: clamp(1.75rem, 5vw, 4.5rem); line-height: 0.95; }
+    .fluid-label { font-size: clamp(0.72rem, 1.2vw, 1.1rem); }
+    .fluid-sub { font-size: clamp(1rem, 2.3vw, 2.1rem); }
 
-    /* Fluid type helpers (no fixed px). clamp(min, preferred, max). */
-    .fluid-brand { font-size: clamp(2.5rem, 8vw, 7.5rem); line-height: 0.9; }
-    .fluid-h2    { font-size: clamp(1.5rem, 4.2vw, 3.5rem); line-height: 1; }
-    .fluid-label { font-size: clamp(0.7rem, 1.15vw, 1.05rem); }
-    .fluid-sub   { font-size: clamp(0.95rem, 2vw, 1.8rem); }
-
-    /* Motion - restrained, NO glow. Entrance + state feedback only. */
-    @keyframes bo-rise2 { from { opacity: 0; transform: translateY(1.25rem); } to { opacity: 1; transform: translateY(0); } }
-    .anim-rise { animation: bo-rise2 460ms cubic-bezier(0.22,1,0.36,1) both; }
-
-    @keyframes bo-live { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-    .live-dot { animation: bo-live 1.4s ease-in-out infinite; }
-
-    /* Solid-red Sudden-Death flash: a plain color block pulsing opacity (no neon). */
-    @keyframes bo-flash { 0%, 100% { opacity: 0; } 50% { opacity: 0.22; } }
-    .danger-flash { animation: bo-flash 0.85s steps(1, end) infinite; }
-
-    @keyframes bo-alarm { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.09); } }
-    .alarm-icon { animation: bo-alarm 0.85s ease-in-out infinite; }
-
-    /* White caution stripes on the solid red block (solid, print-safe, no glow). */
-    .hazard { height: clamp(0.8rem, 1.8vh, 1.4rem); background-image: repeating-linear-gradient(-45deg, #ffffff 0 18px, transparent 18px 36px); opacity: 0.9; }
-    @keyframes bo-hazard { from { background-position: 0 0; } to { background-position: 72px 0; } }
-    .hazard-move { animation: bo-hazard 0.8s linear infinite; }
+    /* ── Motion. */
+    @keyframes bo-live { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.82); } }
+    .live-dot { animation: bo-live 1.2s ease-in-out infinite; }
+    @keyframes bo-pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+    .pulse-soft { animation: bo-pulse 1.5s ease-in-out infinite; }
+    @keyframes bo-flash { 0%,100% { opacity: 0; } 50% { opacity: .3; } }
+    .danger-flash { animation: bo-flash .7s steps(1,end) infinite; }
+    @keyframes bo-alarm { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+    .alarm-icon { animation: bo-alarm .7s ease-in-out infinite; }
+    .hazard { height: clamp(1rem, 2.2vh, 1.7rem); background-color: #7A1E22;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='20' viewBox='0 0 40 20'%3E%3Cpath d='M0 0h20l20 10-20 10H0l20-10z' fill='%23D4A85A'/%3E%3C/svg%3E");
+      background-size: 40px 100%; background-repeat: repeat-x; animation: bo-hazard .7s linear infinite; }
+    @keyframes bo-hazard { from { background-position-x: 0; } to { background-position-x: -40px; } }
 
     @media (prefers-reduced-motion: reduce) {
-      .anim-rise, .live-dot, .danger-flash, .alarm-icon, .hazard-move { animation: none !important; }
+      .float-coins, .coin3d > .cin, .bob, .bob-2, .shine::after, .twinkle, .live-dot,
+      .pulse-soft, .danger-flash, .alarm-icon, .hazard { animation: none !important; }
     }
   </style>
 </head>
 
-<!-- PROJECTOR VIEW · light editorial scoreboard. High-contrast, fluid, and
-     auto-fitted to any aspect ratio. Real-time state via window.BlueOcean. -->
-<body class="relative h-full min-h-[100dvh] overflow-hidden bg-slate-50 font-sans text-slate-900 antialiased">
+<body class="relative h-full min-h-[100dvh] overflow-hidden font-sans text-[#14110B] antialiased">
 
-  <!-- ── BROADCAST TOP BAR (persistent, above all screens) ─────────────────── -->
-  <div id="hud-bar" class="pointer-events-none fixed inset-x-0 top-0 z-40 flex min-h-[6.5vh] items-center justify-between gap-4 border-b border-slate-200 bg-white/90 px-[3vw] py-[1.2vh] backdrop-blur-sm">
-    <div class="flex items-center gap-3">
-      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-blue-600 text-white">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" class="h-5 w-5"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
-      </span>
-      <span class="fluid-label font-extrabold uppercase tracking-[0.2em] text-slate-900">MARKET&nbsp;FIT</span>
-      <span class="fluid-label hidden font-semibold uppercase tracking-[0.2em] text-slate-400 md:inline">Độc chiếm thị trường</span>
-    </div>
-    <div class="fluid-label flex items-center gap-3 font-semibold uppercase tracking-[0.2em]">
-      <span id="hud-phase" class="text-blue-600">Sảnh chờ</span>
-      <span class="h-4 w-px bg-slate-200"></span>
-      <span class="flex items-center gap-2 text-slate-600">
-        <span class="live-dot inline-block h-2.5 w-2.5 rounded-full bg-red-600"></span>LIVE
-      </span>
-    </div>
-  </div>
+  <!-- Shared gold gradients (defined once, referenced by all coins/ingots). -->
+  <svg width="0" height="0" class="absolute"><defs>
+    <radialGradient id="coinG" cx="38%" cy="30%" r="80%"><stop offset="0%" stop-color="#FFE9A8"/><stop offset="45%" stop-color="#F4B740"/><stop offset="100%" stop-color="#B8860B"/></radialGradient>
+    <linearGradient id="ingotG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFE9A8"/><stop offset="55%" stop-color="#F4B740"/><stop offset="100%" stop-color="#B8860B"/></linearGradient>
+    <radialGradient id="bagG" cx="42%" cy="30%" r="80%"><stop offset="0%" stop-color="#F6C560"/><stop offset="60%" stop-color="#E29A1E"/><stop offset="100%" stop-color="#9A6410"/></radialGradient>
+  </defs></svg>
 
-  <!-- ── SCREEN: LOBBY (PHASE_0) ──────────────────────────────────────────── -->
+  <div class="tet-bg"><div class="float-coins" id="float-coins"></div></div>
+
+  <!-- ── BROADCAST TOP BAR ─────────────────────────────────────────────────── -->
+
+  <!-- ── SCREEN: LOBBY ────────────────────────────────────────────────────── -->
   <section id="screen-lobby" class="screen screen-wrap absolute inset-0 z-10 items-center justify-center px-[4vw] pb-[3vh] pt-[8vh]">
-    <div class="fit flex w-full flex-col items-center justify-center gap-[3vh] lg:flex-row lg:justify-between lg:gap-[4vw]">
-      <!-- Left: brand block -->
-      <div class="flex flex-col items-center gap-[1.8vh] text-center lg:items-start lg:text-left">
-        <h1 class="fluid-brand font-black uppercase tracking-tight text-slate-900">
-          MARKET<br /><span class="text-blue-600">FIT</span>
+    <div class="fit flex flex-col items-center justify-center gap-[4vh] lg:flex-row lg:gap-[4vw]">
+      <!-- Thần Tài chào đón (ảnh 2D · fallback xu vàng) -->
+      <div data-reveal data-img="than-tai-welcome.png" data-alt="Thần Tài chào đón khai game" class="bob relative z-0 grid h-[clamp(14rem,60vh,46rem)] w-[clamp(11rem,30vw,40rem)] shrink-0 place-items-center"></div>
+      <!-- Brand -->
+      <div class="relative z-10 flex flex-col items-center gap-[2vh] text-center lg:items-start lg:text-left">
+        <p data-reveal class="fluid-label rounded-full px-4 py-1.5 font-semibold uppercase tracking-[0.26em]" style="background:rgba(185,138,62,.12);color:#8A6522">Thần Tài tập khởi nghiệp</p>
+        <h1 data-reveal class="fluid-brand font-display font-extrabold uppercase" style="color:#14110B">
+          MARKET<br /><span style="color:#B98A3E">FIT</span>
         </h1>
-        <p class="fluid-sub font-bold uppercase tracking-[0.12em] text-slate-500">Độc chiếm thị trường</p>
-        <div class="mt-1 flex flex-wrap justify-center gap-x-8 gap-y-3 lg:justify-start">
-          <div><p class="text-[clamp(1.5rem,3.6vw,2.75rem)] font-black tabular-nums text-slate-900">04</p><p class="fluid-label uppercase tracking-[0.18em] text-slate-400">Đội startup</p></div>
+        <p data-reveal class="fluid-sub font-display font-extrabold uppercase tracking-tight" style="color:#6B6459">Độc chiếm thị trường</p>
+        <div data-reveal class="flex items-center gap-3">
+          <span class="coin3d h-[5vh] w-[5vh] bob-2"><span class="cin"><span class="coin-face"></span><span class="coin-face back"></span></span></span>
+          <span data-art="ingot" class="h-[6vh] w-[9vh] bob"></span>
+          <span data-art="bag" class="h-[6vh] w-[6vh] bob-2"></span>
         </div>
       </div>
 
-      <!-- Right: join panel -->
-      <div class="flex w-full max-w-[30rem] shrink-0 flex-col items-center gap-[1.8vh] rounded-2xl border border-slate-200 bg-white p-[2.4vh] shadow-sm lg:w-auto">
-        <div class="flex flex-col items-center gap-2">
-          <div class="grid aspect-square w-[clamp(6.5rem,14vh,10rem)] place-items-center rounded-2xl border-2 border-blue-600 bg-white">
-            <span class="text-[clamp(1.25rem,3.5vh,2.25rem)] font-black tracking-widest text-slate-900">QR</span>
+      <!-- Right: join panel (lì xì style) -->
+      <div data-reveal class="flex w-full max-w-[32rem] shrink-0 flex-col items-center gap-[2vh] rounded-3xl border p-[2.6vh] shadow-sm lg:w-auto" style="background:#FFFFFF;border-color:#E7E3DA">
+        <div class="flex flex-col items-center gap-2.5">
+          <div class="grid aspect-square w-[clamp(7rem,15vh,11rem)] place-items-center rounded-2xl" style="background:#F7F5F0;border:1px solid #E7E3DA">
+            <span class="text-[clamp(1.5rem,4vh,2.5rem)] font-display font-extrabold tracking-widest" style="color:#14110B">QR</span>
           </div>
-          <p class="fluid-label font-semibold uppercase tracking-[0.24em] text-slate-500">Quét để tham gia</p>
+          <p class="fluid-label font-semibold uppercase tracking-[0.24em]" style="color:#A39B8D">Quét để tham gia</p>
         </div>
-        <div class="h-px w-full bg-slate-200"></div>
+        <div class="h-px w-full" style="background:#E7E3DA"></div>
         <div id="lobby-slots" class="grid w-full grid-cols-1 gap-2.5"></div>
-        <p class="fluid-label font-bold uppercase tracking-wide text-slate-500">
-          <span id="lobby-ready" class="text-[clamp(1.5rem,3.5vh,2.5rem)] font-black tabular-nums text-blue-600">0</span> / 4 SẴN SÀNG
+        <p class="fluid-label font-display font-extrabold uppercase tracking-wide" style="color:#6B6459">
+          <span id="lobby-ready" class="text-[clamp(1.75rem,4vh,3rem)] font-extrabold tabular-nums" style="color:#B98A3E">0</span> / 4 SẴN SÀNG
         </p>
       </div>
     </div>
   </section>
 
-  <!-- ── SCREEN: LEADERBOARD (PHASE_1 / PHASE_3_CHECK) ────────────────────── -->
+  <!-- ── SCREEN: LEADERBOARD ──────────────────────────────────────────────── -->
   <section id="screen-leaderboard" class="screen screen-wrap absolute inset-0 z-10 items-center justify-center px-[4vw] pb-[3vh] pt-[8vh]">
-    <div class="fit flex w-full flex-col gap-[2vh]">
-      <div class="flex flex-wrap items-end justify-between gap-2">
+    <div class="fit flex w-full flex-col gap-[2.5vh]">
+      <div data-reveal class="flex flex-wrap items-center justify-between gap-2">
         <div class="flex items-center gap-3">
-          <span class="h-[clamp(1.5rem,3.6vh,2.5rem)] w-1.5 rounded bg-blue-600"></span>
-          <h2 class="fluid-h2 font-black uppercase tracking-tight text-slate-900">Bảng vốn hoá</h2>
+          <span data-art="bag" class="h-[7vh] w-[7vh] bob"></span>
+          <h2 class="fluid-h2 font-display font-extrabold uppercase" style="color:#14110B">Bảng vốn hoá</h2>
         </div>
-        <p class="fluid-label font-semibold uppercase tracking-[0.22em] text-slate-400">Đơn vị · tỷ đồng</p>
+        <p class="fluid-label rounded-full border px-4 py-1.5 font-semibold uppercase tracking-[0.2em]" style="background:#FFFFFF;border-color:#E7E3DA;color:#6B6459">Đơn vị · tỷ đồng</p>
       </div>
       <div id="board" class="grid grid-cols-2 items-end gap-[2vw] lg:grid-cols-4"></div>
     </div>
   </section>
 
-  <!-- ── SCREEN: MARKET (PHASE_2) ─────────────────────────────────────────── -->
+  <!-- ── SCREEN: MARKET ───────────────────────────────────────────────────── -->
   <section id="screen-market" class="screen screen-wrap absolute inset-0 z-10 items-center justify-center px-[4vw] pb-[3vh] pt-[8vh]">
     <div class="fit flex w-full flex-col gap-[2.5vh]">
-      <div class="flex flex-wrap items-end justify-between gap-2">
+      <div data-reveal class="flex flex-wrap items-center justify-between gap-2">
         <div class="flex items-center gap-3">
-          <span class="h-[clamp(1.5rem,3.6vh,2.5rem)] w-1.5 rounded bg-blue-600"></span>
-          <h2 class="fluid-h2 font-black uppercase tracking-tight text-slate-900">Mục tiêu thâm nhập</h2>
+          <span class="coin3d h-[6.5vh] w-[6.5vh] bob"><span class="cin"><span class="coin-face"></span><span class="coin-face back"></span></span></span>
+          <h2 class="fluid-h2 font-display font-extrabold uppercase" style="color:#14110B">Mục tiêu thâm nhập</h2>
         </div>
-        <p class="fluid-label font-semibold uppercase tracking-[0.22em] text-slate-400">Độc chiếm · nhận trọn giá trị</p>
+        <p class="fluid-label rounded-full border px-4 py-1.5 font-semibold uppercase tracking-[0.2em]" style="background:#FFFFFF;border-color:#E7E3DA;color:#6B6459">Độc chiếm · nhận trọn vốn</p>
       </div>
-      <div id="market-cards" class="grid w-full grid-cols-1 gap-[2vw] md:grid-cols-2"></div>
+      <div class="flex flex-col gap-[2vh] lg:flex-row lg:items-stretch">
+        <!-- Thần Tài đứng phân vân trước các thị trường (3D slot) -->
+        <div data-reveal data-img="than-tai-think.png" data-alt="Thần Tài phân vân chọn thị trường" class="bob grid h-[clamp(9rem,26vh,20rem)] shrink-0 place-items-center lg:h-auto lg:w-[24%]"></div>
+        <div id="market-cards" class="grid w-full flex-1 grid-cols-1 gap-[2vw] md:grid-cols-2"></div>
+      </div>
     </div>
   </section>
 
-  <!-- ── SCREEN: SUDDEN DEATH (PHASE_3) ───────────────────────────────────── -->
-  <section id="screen-alert" class="screen screen-wrap absolute inset-0 z-30 items-center justify-center bg-red-600 px-[5vw] pb-[3vh] pt-[8vh] text-white">
-    <div class="danger-flash pointer-events-none absolute inset-0 bg-red-900"></div>
-    <div class="hazard hazard-move absolute inset-x-0 top-0"></div>
-    <div class="hazard hazard-move absolute inset-x-0 bottom-0"></div>
+  <!-- ── SCREEN: SUDDEN DEATH (full takeover) ─────────────────────────────── -->
+  <section id="screen-alert" class="screen screen-wrap absolute inset-0 z-50 items-center justify-center overflow-hidden px-[5vw] py-[5vh] text-white">
+    <div class="absolute inset-0" style="background:radial-gradient(120% 100% at 50% 0%,#C0392B,#8A1F1F 60%,#5E1414 100%)"></div>
+    <div class="danger-flash pointer-events-none absolute inset-0 bg-black"></div>
+    <div class="hazard absolute inset-x-0 top-0"></div>
+    <div class="hazard absolute inset-x-0 bottom-0"></div>
 
-    <div class="fit relative flex flex-col items-center gap-[2vh]">
-      <svg class="alarm-icon h-[clamp(3.5rem,10vh,7rem)] w-[clamp(3.5rem,10vh,7rem)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-        <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
-      </svg>
-      <p class="fluid-label font-bold uppercase tracking-[0.4em] text-red-100">Cảnh báo</p>
-      <p class="text-center text-[clamp(2.25rem,7.5vw,6.5rem)] font-black uppercase leading-[0.9] tracking-tight">Đấu thầu sinh tử</p>
-      <p id="alert-teams" class="flex flex-wrap items-center justify-center gap-x-4 text-center text-[clamp(1.35rem,4vw,3rem)] font-black uppercase"></p>
-      <!-- high-speed bid roll: live blind-bidding tension (values stay hidden) -->
-      <div class="rounded-xl bg-white px-[4vw] py-[1.4vh] text-red-600 shadow-sm">
-        <span id="sd-scramble" class="text-[clamp(1.75rem,6vw,4.5rem)] font-black tabular-nums tracking-[0.1em]">000</span>
+    <div class="fit relative flex flex-col items-center text-center">
+      <div class="grid h-[clamp(3.75rem,10vh,7rem)] w-[clamp(3.75rem,10vh,7rem)] place-items-center">
+        <svg class="alarm-icon h-full w-full drop-shadow-xl" viewBox="0 0 24 24" fill="none" stroke="#E8C98A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
       </div>
-      <p id="alert-status" class="fluid-label font-bold uppercase tracking-[0.36em] text-red-100"></p>
+      <span class="mt-[2vh] rounded-full px-[2.4vw] py-[0.7vh] fluid-label font-extrabold uppercase tracking-[0.36em] text-white" style="background:rgba(0,0,0,.24)">Cảnh báo · vòng quyết định</span>
+      <h1 class="mt-[1.6vh] font-display text-[clamp(2.5rem,9vw,7.5rem)] font-extrabold uppercase leading-[0.85] tracking-tight text-white drop-shadow-lg">Đấu thầu sinh tử</h1>
+      <div id="alert-teams" class="mt-[2.4vh] flex flex-wrap items-center justify-center gap-[1.2vw]"></div>
+      <div class="mt-[2.8vh] flex flex-col items-center gap-[0.8vh] rounded-3xl px-[5vw] py-[2vh] shadow-2xl" style="background:#FFFFFF;color:#8A1F1F">
+        <span class="text-[clamp(0.6rem,1.1vw,1rem)] font-bold uppercase tracking-[0.34em]" style="color:#B98A3E">Đang nhận giá thầu</span>
+        <span id="sd-scramble" class="font-display text-[clamp(2.25rem,7.5vw,5.5rem)] font-extrabold tabular-nums leading-none tracking-[0.12em]">000</span>
+      </div>
+      <span id="alert-status" class="mt-[2vh] rounded-full px-[2.4vw] py-[0.7vh] fluid-label font-extrabold uppercase tracking-[0.3em] text-white" style="background:rgba(0,0,0,.24)"></span>
     </div>
   </section>
 
-  <!-- ── SCREEN: VICTORY (PHASE_4) ────────────────────────────────────────── -->
-  <section id="screen-victory" class="screen screen-wrap absolute inset-0 z-30 items-center justify-center bg-slate-50 px-[5vw] pb-[3vh] pt-[8vh]">
+  <!-- ── SCREEN: VICTORY ──────────────────────────────────────────────────── -->
+  <section id="screen-victory" class="screen screen-wrap absolute inset-0 z-30 overflow-hidden">
     <div id="confetti" class="pointer-events-none absolute inset-0 overflow-hidden"></div>
-
-    <div class="fit relative flex flex-col items-center gap-[1.6vh]">
-      <svg class="h-[clamp(4rem,11vh,8rem)] w-[clamp(4rem,11vh,8rem)] text-blue-600" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 12H5L3 7z" /><rect x="5" y="19" width="14" height="2.4" rx="0.4" />
-      </svg>
-      <p class="fluid-label font-bold uppercase tracking-[0.4em] text-blue-600">Nhà vô địch</p>
-      <p id="victory-name" class="text-center text-[clamp(2.25rem,6.5vw,6rem)] font-black uppercase leading-none tracking-tight text-slate-900">…</p>
-      <p class="text-[clamp(1.5rem,3.6vw,2.75rem)] font-black tabular-nums text-slate-900"><span id="victory-score" class="text-blue-600">0</span> <span class="text-[0.6em] text-slate-400">TỶ</span></p>
-      <!-- Sudden-death transparency: both locked bids, revealed here. -->
-      <div id="victory-bids" style="display:none" class="mt-[0.5vh] flex-wrap justify-center gap-[2vw]"></div>
+    <div class="absolute inset-x-0 top-[8.5vh] z-10 flex flex-col items-center gap-[0.5vh] px-[4vw] text-center" data-reveal>
+      <span class="fluid-label rounded-full px-4 py-1.5 font-semibold uppercase tracking-[0.4em]" style="background:rgba(185,138,62,.12);color:#8A6522">Công bố kết quả</span>
+      <p class="font-display text-[clamp(1.5rem,4.2vw,3.25rem)] font-extrabold uppercase tracking-tight" style="color:#14110B">Nhà vô địch · <span id="victory-name" style="color:#B98A3E">…</span></p>
+      <p class="font-display text-[clamp(1rem,2.2vw,1.7rem)] font-extrabold tabular-nums" style="color:#A39B8D"><span id="victory-score">0</span> TỶ</p>
+      <div id="victory-bids" style="display:none" class="mt-[1vh] flex-wrap justify-center gap-[2vw]"></div>
     </div>
+    <div id="podium" class="absolute inset-x-0 bottom-0 flex items-end"></div>
   </section>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const { store, PHASES, TEAM_IDS, TEAM_META, MARKETS, rankTeams, formatNumber } = window.BlueOcean;
-
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      // Team data colors (semantic e-sports encoding, solid on white). blue-600 is
-      // also the UI accent - acceptable overlap on an editorial scoreboard.
-      const COLOR = { team1: '#2563eb', team2: '#059669', team3: '#f59e0b', team4: '#e11d48' };
+      const COLOR = { team1: '#4F46E5', team2: '#059669', team3: '#D97706', team4: '#E11D48' };
+      const MARKET_NAME = { A: 'HIỆN CÓ', B: 'NGÁCH', C: 'MỚI' };
 
-      // Display-name override ONLY. Values come from MARKETS (app.js) so the number
-      // on screen equals the number used for scoring (100 / 70 / 40).
-      const MARKET_NAME = { A: 'THỊ TRƯỜNG HIỆN CÓ', B: 'THỊ TRƯỜNG NGÁCH', C: 'THỊ TRƯỜNG MỚI' };
-      const MARKET_TAG  = { A: 'Quy mô lớn', B: 'Ngách tăng trưởng', C: 'Cơ hội mới' };
-      const MARKET_ICON = {
-        A: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-full w-full"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.7" fill="currentColor"/></svg>',
-        B: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-full w-full"><path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>',
-        C: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-full w-full"><path d="M12 2v4"/><path d="M12 2 8.5 6h7L12 2z" fill="currentColor"/><path d="M5 10c3 2 3 8 0 10 5 0 6-4 7-7 1 3 2 7 7 7-3-2-3-8 0-10-5 0-6 4-7 7-1-3-2-7-7-7z"/></svg>',
+      // Reusable SVG art (references shared gradients defined in <defs>).
+      const COIN = `<svg viewBox="0 0 100 100" class="h-full w-full drop-shadow"><circle cx="50" cy="50" r="47" fill="url(#coinG)" stroke="#8A5A00" stroke-width="3"/><circle cx="50" cy="50" r="38" fill="none" stroke="#8A5A00" stroke-width="2" opacity=".5"/><rect x="41" y="41" width="18" height="18" rx="2" fill="#7A5B1E" stroke="#8A5A00" stroke-width="2"/><circle cx="50" cy="15" r="2.4" fill="#8A5A00"/><circle cx="50" cy="85" r="2.4" fill="#8A5A00"/><circle cx="15" cy="50" r="2.4" fill="#8A5A00"/><circle cx="85" cy="50" r="2.4" fill="#8A5A00"/></svg>`;
+      const INGOT = `<svg viewBox="0 0 100 62" class="h-full w-full shine drop-shadow"><ellipse cx="50" cy="46" rx="45" ry="14" fill="url(#ingotG)" stroke="#8A5A00" stroke-width="2.5"/><path d="M16 42 Q30 20 50 20 Q70 20 84 42 Q68 34 50 34 Q32 34 16 42 Z" fill="url(#ingotG)" stroke="#8A5A00" stroke-width="2.5"/><ellipse cx="50" cy="42" rx="20" ry="5" fill="#FFE9A8" opacity=".6"/></svg>`;
+      const BAG = `<svg viewBox="0 0 100 100" class="h-full w-full drop-shadow"><path d="M36 30 Q50 21 64 30 L59 39 Q50 34 41 39 Z" fill="#F4B740" stroke="#8A5A00" stroke-width="2.5"/><path d="M41 39 Q19 56 27 79 Q34 96 50 96 Q66 96 73 79 Q81 56 59 39 Q50 45 41 39 Z" fill="url(#bagG)" stroke="#8A5A00" stroke-width="2.5"/><circle cx="50" cy="70" r="11" fill="none" stroke="#7A5B1E" stroke-width="2.5"/><rect x="45.5" y="65.5" width="9" height="9" rx="1.5" fill="#7A5B1E"/></svg>`;
+      const CROWN = `<svg viewBox="0 0 24 24" fill="currentColor" class="h-full w-full"><path d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 11H5L3 7z"/></svg>`;
+      const CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="h-full w-full"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+      // Fill decorative art holders with the SVG.
+      const ART = { coin: COIN, ingot: INGOT, bag: BAG };
+      document.querySelectorAll('.coin-face').forEach((el) => { el.innerHTML = COIN; });
+      document.querySelectorAll('[data-art]').forEach((el) => { el.innerHTML = ART[el.dataset.art] || ''; });
+
+      /* ── Thần Tài slots: try 3D (.glb) → 2D (.png) → gold-coin fallback. ──
+         Drop files into ./assets/ named than-tai-<scene>.glb / .png and they
+         appear automatically. Missing assets keep the spinning-coin fallback. */
+      const TT_FALLBACK = `<span class="coin3d h-[46%] w-[46%]"><span class="cin"><span class="coin-face">${COIN}</span><span class="coin-face back">${COIN}</span></span></span>`;
+      const assetExists = (url) => fetch(url, { method: 'HEAD' }).then((r) => r.ok).catch(() => false);
+      const mountTT = async (el) => {
+        const img = el.dataset.img;
+        if (el._ttImg === img) return;
+        el._ttImg = img;
+        el.innerHTML = TT_FALLBACK; // xu vàng khi chưa có ảnh
+        if (img && await assetExists(`./assets/${img}`)) {
+          el.innerHTML = `<img src="./assets/${img}" alt="${el.dataset.alt || 'Thần Tài'}" style="width:100%;height:100%;object-fit:contain;object-position:bottom" />`;
+        }
       };
+      document.querySelectorAll('[data-img]').forEach(mountTT);
 
       const HUD_PHASE_LABEL = {
-        [PHASES.LOBBY]: 'Sảnh chờ',
-        [PHASES.ACCUMULATION]: 'Tích luỹ vốn',
-        [PHASES.BLUE_OCEAN]: 'Chọn thị trường',
-        [PHASES.PHASE_3_CHECK]: 'Đối soát',
-        [PHASES.SUDDEN_DEATH]: 'Đấu thầu sinh tử',
-        [PHASES.VICTORY]: 'Công bố',
+        [PHASES.LOBBY]: 'Sảnh chờ', [PHASES.ACCUMULATION]: 'Tích luỹ vốn', [PHASES.BLUE_OCEAN]: 'Chọn thị trường',
+        [PHASES.PHASE_3_CHECK]: 'Đối soát', [PHASES.SUDDEN_DEATH]: 'Đấu thầu sinh tử', [PHASES.VICTORY]: 'Công bố',
       };
 
-      let stateCache = {};
-      let teamsCache = {};
+      let stateCache = {}, teamsCache = {}, lastScreenId = null;
 
-      const showScreen = (id) => document.querySelectorAll('.screen').forEach((el) =>
-        el.classList.toggle('is-active', el.id === id));
+      /* ── background floating coins ── */
+      if (!reduceMotion) {
+        const fc = document.getElementById('float-coins');
+        for (let i = 0; i < 6; i += 1) {
+          const s = 18 + Math.floor(Math.random() * 28);
+          const d = document.createElement('div');
+          d.style.cssText = `position:absolute;left:${Math.random() * 100}%;bottom:-8vh;width:${s}px;height:${s}px;opacity:.2;animation:coin-rise ${18 + Math.random() * 12}s linear ${-Math.random() * 18}s infinite`;
+          d.innerHTML = COIN;
+          fc.appendChild(d);
+        }
+      }
 
-      /* ── Fit-to-viewport scaler ──────────────────────────────────────────────
-         Scales each screen's .fit content down (never up) so it always fits both
-         width and height of the current projector aspect ratio. Guarantees no
-         clipping / no scrollbars on 16:9, 16:10, 4:3, ultrawide, portrait. */
+      /* ── entrance ── */
+      const playEntrance = (screen) => {
+        if (reduceMotion || typeof gsap === 'undefined' || !screen) return;
+        const els = screen.querySelectorAll('[data-reveal]');
+        if (!els.length) return;
+        gsap.killTweensOf(els);
+        gsap.fromTo(els, { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, stagger: 0.07, ease: 'power3.out', overwrite: 'auto' });
+      };
+
+      /* ── fit scaler ── */
       const fitScreen = (screen) => {
-        const fit = screen.querySelector('.fit');
+        const fit = screen && screen.querySelector('.fit');
         if (!fit) return;
         fit.style.transform = 'scale(1)';
         const cs = getComputedStyle(screen);
         const availW = screen.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
         const availH = screen.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-        const w = fit.scrollWidth;
-        const h = fit.scrollHeight;
+        const w = fit.scrollWidth, h = fit.scrollHeight;
         if (!w || !h || !availW || !availH) return;
-        const scale = Math.min(1, availW / w, availH / h);
-        fit.style.transform = `scale(${scale})`;
+        // Scale to FILL the screen (phóng to hoặc thu nhỏ), cap để tránh vỡ nét quá đà.
+        fit.style.transform = `scale(${Math.min(availW / w, availH / h, 2.2)})`;
       };
-      const fitActive = () => {
-        const active = document.querySelector('.screen.is-active');
-        if (active) requestAnimationFrame(() => fitScreen(active));
-      };
+      const fitActive = () => { const a = document.querySelector('.screen.is-active'); if (a) requestAnimationFrame(() => fitScreen(a)); };
       window.addEventListener('resize', fitActive);
       if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitActive);
       window.addEventListener('load', fitActive);
 
-      /* ── count-up util ── */
+      const showScreen = (id) => {
+        document.querySelectorAll('.screen').forEach((el) => el.classList.toggle('is-active', el.id === id));
+        const active = document.getElementById(id), changed = id !== lastScreenId;
+        lastScreenId = id;
+        requestAnimationFrame(() => { fitScreen(active); if (changed) playEntrance(active); });
+      };
+
+      /* ── count-up ── */
       const animateCount = (el, to) => {
         to = Math.round(Number(to) || 0);
         const cur = Number(el.dataset.val || '0');
         if (cur === to) { el.textContent = to.toLocaleString('vi-VN'); return; }
         el.dataset.val = to;
-        const from = cur;
-        const start = performance.now();
-        const dur = reduceMotion ? 0 : 800;
+        const from = cur, start = performance.now(), dur = reduceMotion ? 0 : 900;
         const step = (now) => {
           const p = dur === 0 ? 1 : Math.min(1, (now - start) / dur);
-          const e = 1 - Math.pow(1 - p, 3);
-          el.textContent = Math.round(from + (to - from) * e).toLocaleString('vi-VN');
+          el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3))).toLocaleString('vi-VN');
           if (p < 1 && Number(el.dataset.val) === to) requestAnimationFrame(step);
         };
         requestAnimationFrame(step);
@@ -275,61 +342,49 @@
       const renderLobby = () => {
         const slots = document.getElementById('lobby-slots');
         slots.innerHTML = TEAM_IDS.map((id) => {
-          const t = teamsCache[id] || {};
-          const on = t.ready === true;
-          const mark = on
-            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><polyline points="20 6 9 17 4 12"/></svg>'
-            : '<span class="block h-3 w-3 rounded-full border-2 border-current"></span>';
-          return `<div class="anim-rise flex items-center gap-3 rounded-lg border px-4 py-[1.2vh]"
-            style="${on ? `background:${COLOR[id]};border-color:${COLOR[id]}` : 'background:#fff;border-color:#e2e8f0'}">
-            <span class="grid h-8 w-8 shrink-0 place-items-center" style="color:${on ? '#fff' : '#94a3b8'}">${mark}</span>
-            <span class="text-[clamp(1.05rem,2.2vw,1.6rem)] font-black uppercase tracking-wide" style="color:${on ? '#fff' : '#94a3b8'}">${on && t.name ? t.name : TEAM_META[id].label}</span>
+          const t = teamsCache[id] || {}, on = t.ready === true;
+          const mark = on ? `<span class="grid h-8 w-8 shrink-0 place-items-center text-white">${CHECK}</span>`
+            : `<span class="grid h-8 w-8 shrink-0 place-items-center"><span class="pulse-soft block h-3.5 w-3.5 rounded-full" style="background:${COLOR[id]}"></span></span>`;
+          return `<div class="flex items-center gap-3 rounded-xl border px-4 py-3"
+            style="${on ? `background:${COLOR[id]};border-color:${COLOR[id]}` : 'background:#FFFFFF;border-color:#E7E3DA'}">
+            ${mark}
+            <span class="text-[clamp(1.1rem,2.4vw,1.7rem)] font-display font-extrabold uppercase tracking-wide" style="color:${on ? '#fff' : '#14110B'}">${on && t.name ? t.name : TEAM_META[id].label}</span>
           </div>`;
         }).join('');
-        animateCount(document.getElementById('lobby-ready'), TEAM_IDS.filter((id) => teamsCache[id] && teamsCache[id].ready).length);
+        const readyEl = document.getElementById('lobby-ready');
+        const n = TEAM_IDS.filter((id) => teamsCache[id] && teamsCache[id].ready).length;
+        animateCount(readyEl, n);
+        readyEl.classList.toggle('pulse-soft', n < 4);
       };
 
       /* ── LEADERBOARD ── */
       const board = document.getElementById('board');
       const buildBoard = () => {
-        // Each column is its own container-query context; the bar sits in a fixed
-        // fluid-height track so bars stay meaningful whether the grid is 4-wide or
-        // wraps to 2-wide. The whole board is then auto-fitted by the scaler.
         board.innerHTML = TEAM_IDS.map((id) => `
-          <div class="cq flex h-full flex-col items-center justify-end gap-[1.2vh]" data-col="${id}">
+          <div class="cq flex h-full flex-col items-center justify-end gap-[1.2vh] rounded-2xl p-[1.4vh] shadow-sm" data-col="${id}" data-reveal style="background:#FFFFFF;border:1px solid #E7E3DA">
             <div class="flex items-center gap-2">
-              <span class="rank grid h-9 min-w-9 place-items-center rounded-lg border-2 border-slate-200 px-2 text-[clamp(1rem,2.2vw,1.5rem)] font-black tabular-nums text-slate-400">-</span>
-              <span class="crown text-blue-600" style="display:none">
-                <svg viewBox="0 0 24 24" fill="currentColor" class="h-7 w-7"><path d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 11H5L3 7z"/></svg>
-              </span>
+              <span class="rank grid h-9 min-w-9 place-items-center rounded-lg px-2 font-display text-[clamp(1rem,2.2vw,1.5rem)] font-extrabold tabular-nums text-white" style="background:${COLOR[id]}">-</span>
+              <span class="crown h-8 w-8" style="display:none;color:#B98A3E">${CROWN}</span>
             </div>
-            <p class="text-[clamp(1.5rem,11cqi,4rem)] font-black tabular-nums leading-none text-slate-900"><span class="score" data-val="0">0</span></p>
-            <div class="flex h-[clamp(6rem,32vh,50vh)] w-full items-end rounded-lg bg-slate-100">
-              <div class="bar w-full rounded-lg transition-all duration-700 ease-out" style="height:0%;background:${COLOR[id]}"></div>
+            <p class="font-display text-[clamp(1.5rem,11cqi,4rem)] font-extrabold tabular-nums leading-none" style="color:#14110B"><span class="score" data-val="0">0</span></p>
+            <div class="flex h-[clamp(6rem,32vh,50vh)] w-full items-end overflow-hidden rounded-xl" style="background:#F1EEE6">
+              <div class="bar w-full rounded-xl transition-all duration-700 ease-out" style="height:0%;background:${COLOR[id]}"></div>
             </div>
-            <p class="name text-center text-[clamp(1rem,2.2vw,1.6rem)] font-black uppercase leading-tight tracking-wide text-slate-700">${TEAM_META[id].label}</p>
+            <p class="name text-center font-display text-[clamp(1rem,2.2vw,1.6rem)] font-extrabold uppercase leading-tight" style="color:#14110B">${TEAM_META[id].label}</p>
           </div>`).join('');
       };
       buildBoard();
       const renderLeaderboard = () => {
-        const ranked = rankTeams(teamsCache);
-        const rankOf = {};
+        const ranked = rankTeams(teamsCache), rankOf = {};
         ranked.forEach((t, i) => { rankOf[t.id] = i + 1; });
         const max = Math.max(1, ...TEAM_IDS.map((id) => (teamsCache[id] ? Number(teamsCache[id].score) || 0 : 0)));
         TEAM_IDS.forEach((id) => {
-          const col = board.querySelector(`[data-col="${id}"]`);
-          const t = teamsCache[id] || {};
-          const score = Number(t.score) || 0;
+          const col = board.querySelector(`[data-col="${id}"]`), t = teamsCache[id] || {}, score = Number(t.score) || 0;
           const isLeader = rankOf[id] === 1 && score > 0;
           animateCount(col.querySelector('.score'), score);
           col.querySelector('.name').textContent = t.name || TEAM_META[id].label;
           col.querySelector('.bar').style.height = `${Math.max(3, (score / max) * 100)}%`;
-          const rankEl = col.querySelector('.rank');
-          rankEl.textContent = `#${rankOf[id] || '-'}`;
-          rankEl.classList.toggle('border-blue-600', isLeader);
-          rankEl.classList.toggle('text-blue-600', isLeader);
-          rankEl.classList.toggle('border-slate-200', !isLeader);
-          rankEl.classList.toggle('text-slate-400', !isLeader);
+          col.querySelector('.rank').textContent = `#${rankOf[id] || '-'}`;
           col.querySelector('.crown').style.display = isLeader ? 'block' : 'none';
         });
       };
@@ -337,29 +392,27 @@
       /* ── MARKET ── */
       const renderMarket = () => {
         const wrap = document.getElementById('market-cards');
-        // A (biggest) is a solid blue block spanning the top row; B + C are white
-        // cards below. Value hierarchy drives the layout, no empty cells.
-        wrap.innerHTML = ['A', 'B', 'C'].map((key, i) => {
-          const m = MARKETS[key];
-          if (!m) return '';
+        wrap.innerHTML = ['A', 'B', 'C'].map((key) => {
+          const m = MARKETS[key]; if (!m) return '';
           const big = key === 'A';
-          const wrapCls = big
-            ? 'md:col-span-2 bg-blue-600 text-white flex-row items-center justify-between px-[3vw] py-[2.4vh]'
-            : 'bg-white text-slate-900 border border-slate-200 shadow-sm flex-col justify-between gap-[1.6vh] p-[2vh]';
-          const tagCls = big ? 'text-blue-100' : 'text-slate-400';
-          const unitCls = big ? 'text-blue-200' : 'text-blue-600';
-          const iconCls = big ? 'text-white' : 'text-blue-600';
-          return `<div class="cq anim-rise ${wrapCls} flex overflow-hidden rounded-2xl" style="animation-delay:${i * 90}ms">
-            <div class="flex ${big ? 'flex-col gap-[1.2vh]' : 'items-center justify-between'}">
-              <div class="flex items-center gap-3">
-                <span class="grid ${big ? 'h-[clamp(2.75rem,5.5vw,4.5rem)] w-[clamp(2.75rem,5.5vw,4.5rem)]' : 'h-[clamp(2rem,5cqi,3.25rem)] w-[clamp(2rem,5cqi,3.25rem)]'} shrink-0 place-items-center ${iconCls}">${MARKET_ICON[key]}</span>
-                <span class="text-[clamp(0.75rem,2.4cqi,1.1rem)] font-bold uppercase tracking-[0.2em] ${tagCls}">${MARKET_TAG[key]}</span>
+          if (big) {
+            return `<div class="cq md:col-span-2 flex flex-row items-center justify-between overflow-hidden rounded-3xl px-[3vw] py-[2.6vh] shadow-sm" data-reveal style="background:#FFFFFF;border:1px solid #E4CE9E;box-shadow:0 1px 0 #E7E3DA">
+              <div class="flex flex-col gap-[1.2vh]">
+                <div class="flex items-center gap-3"><span class="coin3d h-[clamp(2.75rem,5.5vw,4.5rem)] w-[clamp(2.75rem,5.5vw,4.5rem)]"><span class="cin"><span class="coin-face">${COIN}</span><span class="coin-face back">${COIN}</span></span></span>
+                <span class="rounded-full px-3 py-1 text-[clamp(0.7rem,2cqi,1rem)] font-semibold uppercase tracking-[0.2em]" style="background:rgba(185,138,62,.12);color:#8A6522">Quy mô lớn</span></div>
+                <p class="font-display text-[clamp(1.75rem,4.5vw,4rem)] font-extrabold uppercase tracking-tight" style="color:#14110B">${MARKET_NAME[key]}</p>
               </div>
-              <p class="${big ? 'text-[clamp(1.6rem,4.2vw,3.75rem)]' : 'text-[clamp(1.25rem,6cqi,2.25rem)]'} font-black uppercase tracking-tight">${MARKET_NAME[key]}</p>
+              <p class="font-display text-[clamp(3.5rem,11vw,9rem)] font-extrabold tabular-nums leading-none" style="color:#B98A3E">${formatNumber(m.value)}<span class="text-[0.3em]" style="color:#A39B8D"> TỶ</span></p>
+            </div>`;
+          }
+          const c = key === 'B' ? '#D97706' : '#059669';
+          return `<div class="cq flex flex-col justify-between gap-[1.6vh] overflow-hidden rounded-3xl p-[2vh] shadow-sm" data-reveal style="background:#FFFFFF;border:1px solid #E7E3DA">
+            <div class="flex items-center justify-between">
+              <span class="grid h-[clamp(2.5rem,5cqi,3.75rem)] w-[clamp(2.5rem,5cqi,3.75rem)] shrink-0 place-items-center rounded-2xl p-2 text-white" style="background:${c}">${key === 'B' ? BAG : INGOT}</span>
+              <span class="text-[clamp(0.8rem,2.6cqi,1.2rem)] font-semibold uppercase tracking-[0.2em]" style="color:#A39B8D">${key === 'B' ? 'Ngách tăng trưởng' : 'Cơ hội mới'}</span>
             </div>
-            <p class="${big ? 'text-[clamp(3rem,10vw,8rem)]' : 'text-[clamp(2.75rem,22cqi,5.5rem)]'} font-black tabular-nums leading-none">
-              ${formatNumber(m.value)}<span class="text-[0.32em] font-black uppercase ${unitCls}"> tỷ</span>
-            </p>
+            <p class="font-display text-[clamp(1.5rem,7cqi,2.75rem)] font-extrabold uppercase tracking-tight" style="color:#14110B">${MARKET_NAME[key]}</p>
+            <p class="font-display text-[clamp(3rem,24cqi,6rem)] font-extrabold tabular-nums leading-none" style="color:${c}">${formatNumber(m.value)}<span class="text-[0.3em]" style="color:#A39B8D"> TỶ</span></p>
           </div>`;
         }).join('');
       };
@@ -368,90 +421,113 @@
       let sdTL = null;
       const scrambleEl = document.getElementById('sd-scramble');
       const startSuddenDeath = () => {
-        if (sdTL || reduceMotion || typeof gsap === 'undefined') {
-          if (reduceMotion) scrambleEl.textContent = '???';
-          return;
-        }
+        if (sdTL || reduceMotion || typeof gsap === 'undefined') { if (reduceMotion) scrambleEl.textContent = '???'; return; }
         const roll = { v: 0 };
-        // High-speed number roll - reads as blind bids flying in. Loops until the
-        // phase changes and we kill it.
-        sdTL = gsap.to(roll, {
-          v: 999, duration: 0.28, ease: 'none', repeat: -1, repeatRefresh: true,
-          onUpdate: () => { scrambleEl.textContent = String(Math.floor(roll.v)).padStart(3, '0'); },
-        });
+        sdTL = gsap.to(roll, { v: 999, duration: 0.26, ease: 'none', repeat: -1, repeatRefresh: true, onUpdate: () => { scrambleEl.textContent = String(Math.floor(roll.v)).padStart(3, '0'); } });
       };
       const stopSuddenDeath = () => { if (sdTL) { sdTL.kill(); sdTL = null; } };
-
       const renderAlert = () => {
         const ids = Array.isArray(stateCache.suddenDeathTeams) ? stateCache.suddenDeathTeams : [];
-        const names = ids.map((id) => (teamsCache[id] && teamsCache[id].name) || (TEAM_META[id] && TEAM_META[id].label) || id);
-        document.getElementById('alert-teams').innerHTML = names
-          .map((n) => `<span>${n}</span>`)
-          .join('<span class="text-red-200">VS</span>');
+        const chips = ids.map((id) => {
+          const nm = (teamsCache[id] && teamsCache[id].name) || (TEAM_META[id] && TEAM_META[id].label) || id;
+          return `<span class="rounded-2xl px-[2.5vw] py-[1vh] font-display text-[clamp(1.25rem,4vw,3rem)] font-extrabold uppercase text-white shadow-lg" style="background:${COLOR[id] || '#0f172a'}">${nm}</span>`;
+        });
+        document.getElementById('alert-teams').innerHTML = chips.join('<span class="font-display text-[clamp(1.25rem,4vw,3rem)] font-extrabold" style="color:#E8C98A">VS</span>');
         const locked = ids.filter((id) => teamsCache[id] && teamsCache[id].bidAmount != null).length;
         document.getElementById('alert-status').textContent = `Đã chốt giá · ${locked}/${ids.length || 2}`;
         startSuddenDeath();
       };
 
-      /* ── VICTORY (confetti) ── */
+      /* ── VICTORY (coin rain) ── */
       const confettiWrap = document.getElementById('confetti');
-      let confettiOn = false;
-      const startConfetti = () => {
-        if (confettiOn || reduceMotion) return;
-        confettiOn = true;
-        // Solid colors that read on a light background (no white).
-        const colors = ['#2563eb', '#059669', '#f59e0b', '#e11d48', '#0f172a'];
-        for (let i = 0; i < 90; i += 1) {
+      let rainOn = false;
+      const startRain = () => {
+        if (rainOn || reduceMotion) return;
+        rainOn = true;
+        for (let i = 0; i < 48; i += 1) {
+          const s = 26 + Math.floor(Math.random() * 34);
+          const dur = 3 + Math.random() * 3;
           const c = document.createElement('div');
-          c.className = 'confetti';
-          c.style.left = `${Math.random() * 100}%`;
-          c.style.background = colors[i % colors.length];
-          c.style.animationDuration = `${2.4 + Math.random() * 2.6}s`;
-          c.style.animationDelay = `${Math.random() * 1.2}s`;
+          c.className = 'coin-drop';
+          c.innerHTML = Math.random() < 0.65 ? INGOT : COIN; // thỏi vàng (chủ yếu) + ít xu vàng
+          // Delay âm = bắt đầu giữa chừng → đầy màn ngay + rơi liên tục.
+          c.style.cssText = `left:${Math.random() * 100}%;width:${s}px;animation-duration:${dur}s;animation-delay:${-Math.random() * dur}s`;
           confettiWrap.appendChild(c);
         }
       };
-      const stopConfetti = () => { confettiOn = false; confettiWrap.innerHTML = ''; };
+      const stopRain = () => { rainOn = false; confettiWrap.innerHTML = ''; };
+
+      // Podium: 1st tallest (cheer), others lower (sad). Order left→right = 2·1·3·4.
+      // Khối bục 3D chạy từ đáy lên; tên + tiền + hạng nằm TRÊN mặt bục; nhân vật đứng trên đỉnh.
+      const TEAMPOD = {
+        team1: ['#6D66EA', '#4F46E5', '#3A32B8'], team2: ['#12C07E', '#059669', '#046B4C'],
+        team3: ['#F59E0B', '#D97706', '#A45A05'], team4: ['#F43F6A', '#E11D48', '#A81237'],
+      };
+      let podiumKey = null;
+      const buildPodium = (ranked) => {
+        const podium = document.getElementById('podium');
+        const order = [1, 0, 2, 3].filter((i) => ranked[i]);
+        const H = ['42vh', '33vh', '29vh', '26vh'];
+        const TTH = ['clamp(8rem,40vh,34rem)', 'clamp(7rem,33vh,28rem)', 'clamp(6.5rem,31vh,26rem)', 'clamp(6rem,29vh,24rem)'];
+        // Tất cả bục cùng màu đỏ Thần Tài (không phân biệt theo hạng).
+        const RED_L = '#E23B3B', RED_C = '#C1121F', RED_D = '#7A0A12';
+        podium.innerHTML = order.map((i) => {
+          const t = ranked[i], rank = i + 1, id = t.id, scene = rank === 1 ? 'cheer' : 'sad', champ = rank === 1;
+          return `<div class="flex flex-1 flex-col items-center justify-end" data-reveal>
+            <div class="tt3d" style="width:98%;height:${TTH[i]};margin-bottom:-1.4vh;z-index:3">
+              <model-viewer src="./assets/than-tai-${scene}.glb" poster="./assets/than-tai-${scene}.png" alt="Thần Tài" autoplay disable-zoom interaction-prompt="none" shadow-intensity="0.3" exposure="1.05" camera-orbit="0deg 86deg auto" style="--poster-color:transparent"></model-viewer>
+            </div>
+            <div class="pod-front ${champ ? 'pod-champ' : ''} flex w-full flex-col items-center justify-between px-2 pt-[1.4vh] pb-[2.8vh]" style="height:${H[i]};background:linear-gradient(180deg,${RED_L} 0%,${RED_C} 34%,${RED_D} 100%)">
+              <div class="pod-cap"></div>
+              <div class="relative z-10 mt-[1.2vh] flex flex-col items-center leading-tight">
+                ${champ ? `<span class="mb-1 grid h-[clamp(1.4rem,3vw,2.6rem)] w-[clamp(1.4rem,3vw,2.6rem)] place-items-center" style="color:#FFE08A">${CROWN}</span>` : ''}
+                <span class="font-display text-[clamp(0.85rem,1.9vw,1.7rem)] font-extrabold uppercase text-white text-center">${t.name || TEAM_META[id].label}</span>
+                <span class="font-display text-[clamp(0.78rem,1.5vw,1.35rem)] font-extrabold tabular-nums text-white/85">${formatNumber(t.score)} TỶ</span>
+              </div>
+              <span class="pod-rank relative z-10 text-white/95">${rank}</span>
+            </div>
+          </div>`;
+        }).join('');
+      };
+
       const renderVictory = () => {
-        const w = stateCache.winner;
-        const t = w ? (teamsCache[w] || {}) : {};
-        document.getElementById('victory-name').textContent = t.name || (w && TEAM_META[w] ? TEAM_META[w].label : '…');
-        animateCount(document.getElementById('victory-score'), t.score || 0);
+        const ranked = rankTeams(teamsCache);
+        const champ = ranked[0] || {};
+        document.getElementById('victory-name').textContent = champ.name || (champ.id && TEAM_META[champ.id] ? TEAM_META[champ.id].label : '…');
+        animateCount(document.getElementById('victory-score'), champ.score || 0);
+
+        const key = ranked.map((t) => t.id).join('>') + '|' + (stateCache.winner || '');
+        if (key !== podiumKey) { podiumKey = key; buildPodium(ranked); fitActive(); }
 
         const ids = Array.isArray(stateCache.suddenDeathTeams) ? stateCache.suddenDeathTeams : [];
         const bidsEl = document.getElementById('victory-bids');
         if (ids.length === 2) {
           bidsEl.style.display = 'flex';
           bidsEl.innerHTML = ids.map((id) => {
-            const tt = teamsCache[id] || {};
-            const win = stateCache.winner === id;
-            return `<div class="flex flex-col items-center gap-1 rounded-2xl border px-[3vw] py-[1.4vh] ${win ? 'border-blue-600 bg-white shadow-sm' : 'border-slate-200 bg-white'}">
-              <span class="text-[clamp(1.05rem,2.2vw,1.6rem)] font-black uppercase" style="color:${COLOR[id] || '#0f172a'}">${tt.name || TEAM_META[id].label}</span>
-              <span class="text-[clamp(1.5rem,3.6vw,2.75rem)] font-black tabular-nums text-slate-900">${formatNumber(tt.bidAmount || 0)} <span class="text-[0.5em] text-blue-600">TỶ</span></span>
-              <span class="fluid-label font-bold uppercase tracking-[0.2em] text-slate-400">Giá thầu</span>
+            const tt = teamsCache[id] || {}, win = stateCache.winner === id;
+            return `<div class="flex flex-col items-center gap-1 rounded-3xl px-[3vw] py-[1.6vh] shadow-sm" style="background:#FFFFFF;border:1px solid ${win ? '#E4CE9E' : '#E7E3DA'}">
+              <span class="font-display text-[clamp(1.1rem,2.4vw,1.7rem)] font-extrabold uppercase" style="color:${COLOR[id] || '#14110B'}">${tt.name || TEAM_META[id].label}</span>
+              <span class="font-display text-[clamp(1.75rem,4vw,3rem)] font-extrabold tabular-nums" style="color:#14110B">${formatNumber(tt.bidAmount || 0)} <span class="text-[0.5em]" style="color:#B98A3E">TỶ</span></span>
+              <span class="fluid-label font-semibold uppercase tracking-[0.2em]" style="color:#A39B8D">Giá thầu</span>
             </div>`;
           }).join('');
-        } else {
-          bidsEl.style.display = 'none';
-          bidsEl.innerHTML = '';
-        }
-        startConfetti();
+        } else { bidsEl.style.display = 'none'; bidsEl.innerHTML = ''; }
+        startRain();
       };
 
       /* ── ROUTER ── */
       const render = () => {
         const phase = stateCache.currentPhase || PHASES.LOBBY;
-        document.getElementById('hud-phase').textContent = HUD_PHASE_LABEL[phase] || 'Trực tiếp';
-        if (phase !== PHASES.VICTORY) stopConfetti();
+        const _hp = document.getElementById('hud-phase'); if (_hp) _hp.textContent = HUD_PHASE_LABEL[phase] || 'Trực tiếp';
+        if (phase !== PHASES.VICTORY) stopRain();
         if (phase !== PHASES.SUDDEN_DEATH) stopSuddenDeath();
         switch (phase) {
           case PHASES.LOBBY: showScreen('screen-lobby'); renderLobby(); break;
           case PHASES.BLUE_OCEAN: showScreen('screen-market'); renderMarket(); break;
           case PHASES.SUDDEN_DEATH: showScreen('screen-alert'); renderAlert(); break;
           case PHASES.VICTORY: showScreen('screen-victory'); renderVictory(); break;
-          default: showScreen('screen-leaderboard'); renderLeaderboard(); break; // P1, P3_CHECK
+          default: showScreen('screen-leaderboard'); renderLeaderboard(); break;
         }
-        fitActive(); // re-fit whenever content changes
       };
 
       store.onState((s) => { stateCache = s; render(); });

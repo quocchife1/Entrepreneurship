@@ -1,10 +1,10 @@
-/* ============================================================================
-   Blue Ocean — custom CSS
-   Tailwind utilities handle most styling; this file holds what they can't:
-   keyframe animation, the ocean motion system for the projector, and a few
-   show/hide helpers. The CLIENT + ADMIN stay flat & solid; the PROJECTOR is the
-   "show" surface and is allowed richer motion + depth (waves, glow, confetti).
-   ========================================================================== */
+/* ==========================================================================
+  Blue Ocean — custom CSS
+  Tailwind utilities handle most styling; this file holds what they can't:
+  keyframe animation and a few show/hide helpers. All surfaces are kept flat
+  and solid-color only; motion comes from shape, contrast, and timing instead
+  of gradients.
+  ========================================================================== */
 
 /* ── Screen switching ──────────────────────────────────────────────────────
    Each surface holds several full-screen "screens"; only one is active. */
@@ -73,14 +73,12 @@
   animation: bo-check-draw 480ms 120ms ease-out forwards;
 }
 
-/* ============================================================================
-   3 · PROJECTOR — ocean motion system
+/* ==========================================================================
+   3 · PROJECTOR — motion system
    ========================================================================== */
 
-/* Deep-sea backdrop (allowed gradient here: this is the cinematic show screen). */
 .ocean-bg {
-  background:
-    radial-gradient(120% 80% at 50% -10%, #1e3a8a 0%, #0b1b3f 45%, #060f24 100%);
+  background: #08111f;
 }
 
 /* Layered SVG waves drifting horizontally at different speeds. */
@@ -123,28 +121,12 @@
 }
 .glow-pulse { animation: bo-glow 3.2s ease-in-out infinite; }
 
-/* Sheen sweep across leaderboard bars / cards. */
-@keyframes bo-shimmer {
-  from { transform: translateX(-120%); }
-  to   { transform: translateX(220%); }
+/* Flat pulse ring for emphasis. */
+@keyframes bo-pulse-ring {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.24); }
+  50%      { box-shadow: 0 0 0 0.6rem rgba(59, 130, 246, 0.08); }
 }
-.shimmer {
-  position: relative;
-  overflow: hidden;
-}
-.shimmer::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    100deg,
-    transparent 30%,
-    rgba(255, 255, 255, 0.28) 50%,
-    transparent 70%
-  );
-  transform: translateX(-120%);
-  animation: bo-shimmer 3.4s ease-in-out infinite;
-}
+.pulse-ring { animation: bo-pulse-ring 2.4s ease-in-out infinite; }
 
 /* Slow zoom/float for entrance moments. */
 @keyframes bo-float {
@@ -192,8 +174,8 @@
 @media (prefers-reduced-motion: reduce) {
   .anim-fade, .anim-rise, .anim-pop, .anim-alert,
   .result-pop, .result-shake, .draw-path,
-  .wave-1, .wave-2, .wave-3, .bubble, .glow-pulse, .shimmer::after,
-  .float, .anim-crisis, .confetti, .tick, .badge-pop {
+  .wave-1, .wave-2, .wave-3, .bubble, .glow-pulse,
+  .float, .anim-crisis, .confetti, .tick, .badge-pop, .pulse-ring {
     animation: none !important;
   }
 }

@@ -6,22 +6,17 @@
   <meta name="theme-color" content="#f8fafc" />
   <title>MARKET FIT · Điều khiển</title>
 
-  <!-- Inter (UI) + JetBrains Mono (all figures) for the terminal-adjacent read. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet" />
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
-          },
-        },
-      },
+      theme: { extend: { fontFamily: {
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+      } } },
     };
   </script>
 
@@ -29,10 +24,12 @@
 
   <style>
     body { -webkit-tap-highlight-color: transparent; }
-    /* Brief value-change flash on live figures. */
-    @keyframes ad-flash { 0% { background-color: rgba(37,99,235,0.16); } 100% { background-color: transparent; } }
-    .flash { animation: ad-flash 700ms ease-out; }
-    @media (prefers-reduced-motion: reduce) { .flash { animation: none; } }
+    button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+    @keyframes ad-flash { 0% { background-color: rgba(37,99,235,0.18); } 100% { background-color: transparent; } }
+    .flash { animation: ad-flash 800ms ease-out; }
+    @keyframes ad-toast { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+    .toast-in { animation: ad-toast 200ms ease-out; }
+    @media (prefers-reduced-motion: reduce) { .flash, .toast-in { animation: none; } }
   </style>
 
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -40,276 +37,249 @@
   <script defer src="./app.js"></script>
 </head>
 
-<!-- ADMIN VIEW · dense host control panel. Light, terminal-adjacent, utility-first. -->
+<!-- ADMIN VIEW · guided host control panel. Light, clear, action-first. -->
 <body class="min-h-[100dvh] bg-slate-50 font-sans text-slate-900 antialiased">
 
-  <!-- Safelist: ensure the Play CDN generates every runtime-toggled class. -->
-  <div class="hidden bg-blue-600 bg-emerald-600 bg-red-600 bg-amber-50 bg-emerald-50 bg-red-50 text-white text-amber-700 text-emerald-600 text-red-600 border-amber-400 border-blue-600 border-red-200 ring-blue-600"></div>
+  <!-- Safelist for runtime-toggled classes. -->
+  <div class="hidden bg-blue-600 bg-emerald-600 bg-red-600 bg-amber-500 bg-amber-50 bg-emerald-50 bg-red-50 bg-slate-100 text-white text-amber-700 text-emerald-700 text-red-600 text-blue-700 text-slate-400 border-amber-400 border-blue-600 border-emerald-500 border-red-300 ring-blue-500"></div>
 
-  <main class="mx-auto max-w-[1600px] p-4 lg:p-6">
+  <!-- Toast -->
+  <div id="toast" style="display:none" class="fixed right-4 top-4 z-50 max-w-sm rounded-xl px-4 py-3 text-sm font-bold text-white shadow-lg"></div>
 
-    <!-- ── HEADER ─────────────────────────────────────────────────────────── -->
-    <header class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
+  <!-- ── STICKY HEADER ─────────────────────────────────────────────────────── -->
+  <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur-md">
+    <div class="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-6">
       <div class="flex items-center gap-3">
-        <span class="grid h-10 w-10 place-items-center rounded-lg bg-blue-600 text-white">
+        <span class="grid h-10 w-10 place-items-center rounded-xl bg-blue-600 text-white">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" class="h-5 w-5"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
         </span>
         <div>
-          <h1 class="text-xl font-black uppercase tracking-tight">Market Fit <span class="text-slate-400">· Điều khiển</span></h1>
-          <p class="mt-0.5 font-mono text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
-            PHASE <span id="cur-phase" class="text-blue-600">-</span>
-            <span id="lock-badge" class="ml-2 hidden rounded bg-red-600 px-1.5 py-0.5 text-[10px] text-white">ĐÃ KHÓA</span>
-          </p>
+          <h1 class="text-lg font-black uppercase tracking-tight">Market Fit <span class="text-slate-400">· Điều khiển</span></h1>
+          <p class="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Bảng điều khiển host</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="cur-phase" class="rounded-full bg-blue-600/10 px-3 py-1.5 text-sm font-black uppercase tracking-wide text-blue-700">Sảnh chờ</span>
+        <span id="lock-badge" class="hidden rounded-full bg-red-600 px-3 py-1.5 text-sm font-black uppercase tracking-wide text-white">Đã khóa</span>
+        <span class="flex items-center gap-1.5 rounded-full bg-emerald-600/10 px-3 py-1.5 text-sm font-black uppercase tracking-wide text-emerald-700">
+          <span id="online-count">0</span>/4 online
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-[1600px] space-y-4 p-4 lg:p-6">
+
+    <!-- ── PHASE STEPPER ─────────────────────────────────────────────────────── -->
+    <nav id="stepper" class="grid grid-cols-2 gap-2 sm:grid-cols-5"></nav>
+
+    <!-- ── GUIDANCE + PRIMARY ACTION ─────────────────────────────────────────── -->
+    <section id="guide" class="flex flex-col gap-3 rounded-2xl border-l-4 border-blue-600 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+      <div class="min-w-0">
+        <p class="font-mono text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Bước hiện tại</p>
+        <p id="guide-phase" class="text-2xl font-black uppercase tracking-tight text-slate-900">Sảnh chờ</p>
+        <p id="guide-hint" class="mt-1 max-w-2xl text-sm font-medium text-slate-500">Chờ các đội tham gia.</p>
+      </div>
+      <div id="guide-actions" class="flex shrink-0 flex-wrap gap-2"></div>
+    </section>
+
+    <!-- ── TEAM CONTROL CARDS ────────────────────────────────────────────────── -->
+    <section>
+      <h2 class="mb-2 font-mono text-xs font-black uppercase tracking-[0.2em] text-slate-500">Đội chơi · điểm & trạng thái</h2>
+      <div id="team-cards" class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4"></div>
+    </section>
+
+    <!-- ── QUIZ · STRATEGIC · DANGER ─────────────────────────────────────────── -->
+    <section class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+
+      <!-- Quiz -->
+      <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 class="mb-1 font-mono text-xs font-black uppercase tracking-[0.2em] text-slate-500">Chấm quiz · 30/20/10/5</h2>
+        <p class="mb-3 text-xs font-medium text-slate-500">Chọn đáp án đúng rồi bấm chấm. Để trống = chấm theo tốc độ.</p>
+        <p class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Đáp án đúng</p>
+        <div id="answer-key" class="mb-3 grid grid-cols-5 gap-2"></div>
+        <button id="btn-reveal" class="w-full rounded-xl bg-emerald-600 py-3.5 text-base font-black uppercase tracking-wide text-white transition hover:bg-emerald-700 active:scale-95">
+          Hiện đáp án & chấm
+        </button>
+      </div>
+
+      <!-- Strategic scenario -->
+      <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 class="mb-1 font-mono text-xs font-black uppercase tracking-[0.2em] text-slate-500">Tình huống chiến lược</h2>
+        <p class="mb-3 text-xs font-medium text-slate-500">Thưởng điểm linh hoạt 0 - 50 tỷ cho một đội.</p>
+        <label class="mb-2 flex flex-col gap-1">
+          <span class="text-xs font-bold uppercase tracking-wide text-slate-500">Chọn đội</span>
+          <select id="strat-team" class="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-600"></select>
+        </label>
+        <div class="mb-3 flex items-baseline justify-between">
+          <span class="text-xs font-bold uppercase tracking-wide text-slate-500">Điểm thưởng</span>
+          <span class="font-mono text-3xl font-black leading-none text-blue-600"><span id="strat-val">25</span> <span class="text-base text-slate-400">TỶ</span></span>
+        </div>
+        <input id="strat-range" type="range" min="0" max="50" step="1" value="25" class="mb-1 h-2 w-full cursor-pointer accent-blue-600" />
+        <div class="mb-3 flex justify-between font-mono text-[10px] font-bold text-slate-400"><span>0</span><span>25</span><span>50</span></div>
+        <button id="strat-apply" class="w-full rounded-xl bg-blue-600 py-3 text-sm font-black uppercase tracking-wide text-white transition hover:bg-blue-700 active:scale-95">Chấm điểm</button>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="rounded-2xl border border-red-200 bg-red-50/50 p-5">
+        <h2 class="mb-1 flex items-center gap-2 font-mono text-xs font-black uppercase tracking-[0.2em] text-red-600">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Vùng nguy hiểm
+        </h2>
+        <p class="mb-3 text-xs font-medium text-red-700/70">Mọi thao tác đều có xác nhận.</p>
+        <div class="flex flex-col gap-2">
+          <button id="btn-resolve" class="w-full rounded-xl bg-red-600 py-3 text-sm font-black uppercase tracking-wide text-white transition hover:bg-red-700 active:scale-95">Giải đấu thầu sinh tử</button>
+          <button id="btn-lock" class="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-amber-400 bg-amber-50 py-3 text-sm font-black uppercase tracking-wide text-amber-700 transition active:scale-95">
+            <span id="lock-icon"></span><span id="lock-text">Khóa thao tác của đội</span>
+          </button>
+          <button id="btn-reset" class="w-full rounded-xl border-2 border-red-300 bg-white py-3 text-sm font-black uppercase tracking-wide text-red-600 transition hover:bg-red-50 active:scale-95">Reset toàn bộ ván</button>
         </div>
       </div>
 
-      <!-- Live stats strip (data density) -->
-      <div id="stats" class="flex flex-wrap gap-x-5 gap-y-1 font-mono text-xs font-bold uppercase tracking-wide text-slate-500"></div>
-    </header>
-
-    <div class="grid grid-cols-1 gap-4 lg:grid-cols-12">
-
-      <!-- 1 · PHASE FLOW -->
-      <section class="rounded-xl border border-slate-200 bg-white p-5 lg:col-span-7">
-        <h2 class="mb-3 font-mono text-xs font-black uppercase tracking-[0.2em] text-slate-500">01 · Luồng vòng chơi</h2>
-        <div id="phase-nav" class="grid grid-cols-2 gap-2 sm:grid-cols-5"></div>
-        <div class="mt-3 flex flex-wrap items-center gap-2">
-          <button data-action="calc"
-                  class="flex-1 rounded-lg bg-blue-600 px-3 py-3 text-xs font-black uppercase tracking-wide text-white transition active:scale-95 touch-manipulation">
-            Tính KQ Blue Ocean
-          </button>
-          <div class="grid min-w-[120px] flex-1 place-items-center rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-center">
-            <span class="font-mono text-[10px] font-bold uppercase tracking-widest text-slate-400">Kết quả</span>
-            <span id="action-out" class="font-mono text-sm font-black text-slate-700">-</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- DANGER ZONE -->
-      <section class="rounded-xl border border-red-200 bg-red-50/40 p-5 lg:col-span-5">
-        <h2 class="mb-3 flex items-center gap-2 font-mono text-xs font-black uppercase tracking-[0.2em] text-red-600">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        Vùng nguy hiểm</h2>
-        <div class="flex flex-col gap-2">
-          <button data-action="resolve"
-                  class="w-full rounded-lg bg-red-600 py-3 text-sm font-black uppercase tracking-widest text-white transition active:scale-95 touch-manipulation">
-            Giải sinh tử
-          </button>
-          <button id="btn-lock"
-                  class="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-amber-400 bg-amber-50 py-3 text-sm font-black uppercase tracking-widest text-amber-700 transition active:scale-95 touch-manipulation">
-            <span id="lock-icon"></span><span id="lock-text">Khóa chọn đáp án</span>
-          </button>
-          <button id="btn-reset"
-                  class="w-full rounded-lg border-2 border-red-300 bg-white py-3 text-sm font-black uppercase tracking-widest text-red-600 transition active:scale-95 touch-manipulation">
-            Reset toàn bộ ván
-          </button>
-        </div>
-        <p class="mt-2 text-[11px] font-semibold leading-snug text-red-700/70">Các thao tác này có xác nhận. Giải sinh tử công bố kết quả, Reset xoá toàn bộ điểm.</p>
-      </section>
-
-      <!-- 3 · QUIZ CONTROLLER -->
-      <section class="rounded-xl border border-slate-200 bg-white p-5 lg:col-span-5">
-        <h2 class="mb-3 font-mono text-xs font-black uppercase tracking-[0.2em] text-slate-500">03 · Quiz · 30/20/10/5</h2>
-        <p class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Đáp án đúng (tuỳ chọn)</p>
-        <div id="answer-key" class="mb-3 grid grid-cols-5 gap-2"></div>
-        <button id="btn-reveal"
-                class="w-full rounded-lg bg-emerald-600 py-3.5 text-base font-black uppercase tracking-widest text-white transition active:scale-95 touch-manipulation">
-          Hiện đáp án
-        </button>
-        <p class="mt-2 text-[11px] font-semibold leading-snug text-slate-500">
-          Xếp theo timestamp: nhanh nhất +30, rồi 20, 10, 5. Để trống đáp án = chấm theo tốc độ cho mọi đội đã trả lời.
-        </p>
-      </section>
-
-      <!-- STRATEGIC SCENARIO SLIDER -->
-      <section class="rounded-xl border border-slate-200 bg-white p-5 lg:col-span-7">
-        <h2 class="mb-3 font-mono text-xs font-black uppercase tracking-[0.2em] text-slate-500">02 · Tình huống chiến lược · 0 - 50 tỷ</h2>
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-end">
-          <label class="flex flex-col gap-1 sm:w-44">
-            <span class="text-xs font-bold uppercase tracking-wide text-slate-500">Chọn đội</span>
-            <select id="strat-team" class="w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-600"></select>
-          </label>
-          <div class="flex flex-1 flex-col gap-2">
-            <div class="flex items-baseline justify-between">
-              <span class="text-xs font-bold uppercase tracking-wide text-slate-500">Điểm thưởng</span>
-              <span class="font-mono text-3xl font-black leading-none text-blue-600"><span id="strat-val">25</span> <span class="text-base text-slate-400">TỶ</span></span>
-            </div>
-            <input id="strat-range" type="range" min="0" max="50" step="1" value="25"
-                   class="h-2 w-full cursor-pointer accent-blue-600" />
-            <div class="flex justify-between font-mono text-[10px] font-bold text-slate-400"><span>0</span><span>25</span><span>50</span></div>
-          </div>
-          <button id="strat-apply"
-                  class="rounded-lg bg-blue-600 px-5 py-3 text-sm font-black uppercase tracking-widest text-white transition active:scale-95 touch-manipulation sm:w-40">
-            Chấm điểm
-          </button>
-        </div>
-      </section>
-
-      <!-- 2 · MANUAL SCORE ADJUSTERS -->
-      <section class="rounded-xl border border-slate-200 bg-white p-5 lg:col-span-12">
-        <h2 class="mb-3 font-mono text-xs font-black uppercase tracking-[0.2em] text-slate-500">04 · Chấm điểm thủ công</h2>
-        <div id="score-blocks" class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"></div>
-      </section>
-
-      <!-- 5 · CHEAT VIEW / LIVE DATA -->
-      <section class="rounded-xl border border-slate-200 bg-white p-5 lg:col-span-12">
-        <h2 class="mb-3 font-mono text-xs font-black uppercase tracking-[0.2em] text-slate-500">05 · Dữ liệu trực tiếp</h2>
-        <div class="overflow-auto rounded-lg border border-slate-200" style="max-height:46vh">
-          <table class="w-full min-w-[760px] border-collapse text-left text-sm">
-            <thead>
-              <tr class="sticky top-0 z-10 bg-slate-100 font-mono text-[11px] font-black uppercase tracking-wider text-slate-500">
-                <th class="px-3 py-2.5">Đội</th>
-                <th class="px-3 py-2.5">Tên</th>
-                <th class="px-3 py-2.5">Kết nối</th>
-                <th class="px-3 py-2.5 text-right">Điểm</th>
-                <th class="px-3 py-2.5 text-center">Đáp án</th>
-                <th class="px-3 py-2.5">Thị trường</th>
-                <th class="px-3 py-2.5 text-right">Bid</th>
-                <th class="px-3 py-2.5">Cập nhật</th>
-              </tr>
-            </thead>
-            <tbody id="cheat-rows" class="font-mono font-semibold"></tbody>
-          </table>
-        </div>
-      </section>
-
-    </div>
+    </section>
   </main>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const { store, admin, PHASES, TEAM_IDS, TEAM_META, formatNumber, formatTimeVN } = window.BlueOcean;
+      const { store, admin, PHASES, TEAM_IDS, TEAM_META, rankTeams, formatNumber } = window.BlueOcean;
 
-      const MARKET_NAME = { A: 'HIỆN CÓ', B: 'NGÁCH', C: 'MỚI', D: 'THỊ TRƯỜNG D' };
+      const COLOR = { team1: '#2563eb', team2: '#16a34a', team3: '#f59e0b', team4: '#e11d48' };
+      const MARKET_NAME = { A: 'HIỆN CÓ', B: 'NGÁCH', C: 'MỚI', D: 'TT D' };
 
       let stateCache = {};
       let teamsCache = {};
       let answerKey = null;
+      let lastScores = {};
 
       const $ = (id) => document.getElementById(id);
-      const out = (msg) => { $('action-out').textContent = msg; };
-      const run = async (fn) => {
-        try { const r = await fn(); out('OK'); return r; }
-        catch (e) { out(e.message || 'LỖI'); console.error(e); }
+
+      /* ── toast feedback ── */
+      let toastTimer = null;
+      const showToast = (msg, ok = true) => {
+        const el = $('toast');
+        el.textContent = msg;
+        el.style.background = ok ? '#059669' : '#dc2626';
+        el.style.display = 'block';
+        el.classList.remove('toast-in'); void el.offsetWidth; el.classList.add('toast-in');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { el.style.display = 'none'; }, 2600);
       };
-      const flash = (el) => { if (!el) return; el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); };
+      const run = async (fn, okMsg) => {
+        try { const r = await fn(); showToast(okMsg || 'Đã cập nhật', true); return r; }
+        catch (e) { showToast(e.message || 'Có lỗi xảy ra', false); console.error(e); }
+      };
 
       const LOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
       const UNLOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.9-1"/></svg>';
 
-      /* ── 01 · PHASE NAVIGATION ─────────────────────────────────────────── */
-      const PHASE_BUTTONS = [
-        { key: 'LOBBY', label: 'Lobby' },
-        { key: 'ACCUMULATION', label: 'Tích luỹ' },
-        { key: 'BLUE_OCEAN', label: 'Thị trường' },
-        { key: 'SUDDEN_DEATH', label: 'Sinh tử' },
-        { key: 'VICTORY', label: 'Vô địch' },
+      /* ── phase model ── */
+      const STEPS = [
+        { key: PHASES.LOBBY, label: 'Sảnh chờ' },
+        { key: PHASES.ACCUMULATION, label: 'Tích luỹ' },
+        { key: PHASES.BLUE_OCEAN, label: 'Thị trường' },
+        { key: PHASES.SUDDEN_DEATH, label: 'Sinh tử' },
+        { key: PHASES.VICTORY, label: 'Vô địch' },
       ];
-      const phaseNav = $('phase-nav');
-      phaseNav.innerHTML = PHASE_BUTTONS.map((p) => `
-        <button data-phase="${PHASES[p.key]}"
-          class="rounded-lg border border-slate-200 bg-white px-2 py-3 text-xs font-black uppercase tracking-wide text-slate-700 transition hover:border-blue-600 active:scale-95 touch-manipulation">
-          ${p.label}</button>`).join('');
-      phaseNav.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-phase]');
-        if (btn) run(() => admin.changePhase(btn.dataset.phase));
-      });
-
-      document.querySelector('[data-action="calc"]').addEventListener('click', () =>
-        run(() => admin.calculateBlueOceanResult()));
-      document.querySelector('[data-action="resolve"]').addEventListener('click', () => {
-        if (confirm('Giải vòng đấu thầu sinh tử? Hành động này công bố kết quả cuối cùng.'))
-          run(() => admin.resolveSuddenDeath());
-      });
-      $('btn-reset').addEventListener('click', () => {
-        if (confirm('Reset toàn bộ ván chơi? Toàn bộ điểm và trạng thái sẽ bị xoá.'))
-          run(() => store.resetGame());
-      });
-      $('btn-lock').addEventListener('click', () =>
-        run(() => admin.setLock(stateCache.locked !== true)));
-
-      /* ── 02 · STRATEGIC SCENARIO SLIDER ────────────────────────────────── */
-      const stratTeam = $('strat-team');
-      stratTeam.innerHTML = TEAM_IDS.map((id) => `<option value="${id}">${TEAM_META[id].label}</option>`).join('');
-      const stratRange = $('strat-range');
-      const stratVal = $('strat-val');
-      stratRange.addEventListener('input', () => { stratVal.textContent = stratRange.value; });
-      $('strat-apply').addEventListener('click', () => {
-        const id = stratTeam.value;
-        const amt = Number(stratRange.value);
-        if (!id || amt === 0) { out('Chọn đội & điểm > 0'); return; }
-        run(() => admin.updateScore(id, amt, 'Tình huống chiến lược'));
-      });
-
-      /* ── 04 · SCORE ADJUSTERS ──────────────────────────────────────────── */
-      const scoreBlocks = $('score-blocks');
-      scoreBlocks.innerHTML = TEAM_IDS.map((id) => `
-        <div class="rounded-lg border border-slate-200 bg-slate-50/60 p-4" data-block="${id}">
-          <div class="mb-2 flex items-center gap-2">
-            <span class="h-3.5 w-3.5 rounded-sm ${TEAM_META[id].bg}"></span>
-            <span class="truncate text-sm font-black uppercase tracking-wide" data-name>${TEAM_META[id].label}</span>
-          </div>
-          <p class="mb-3 font-mono text-3xl font-black text-slate-900" data-score>0 <span class="text-base text-slate-400">TỶ</span></p>
-          <div class="mb-2 grid grid-cols-2 gap-2">
-            <button data-delta="2" data-team="${id}" class="rounded-lg bg-blue-600 py-2.5 text-xs font-black uppercase tracking-wide text-white transition active:scale-95 touch-manipulation">+2</button>
-            <button data-delta="5" data-team="${id}" class="rounded-lg bg-blue-600 py-2.5 text-xs font-black uppercase tracking-wide text-white transition active:scale-95 touch-manipulation">+5</button>
-          </div>
-          <div class="flex gap-2">
-            <input type="number" data-amt="${id}" placeholder="± tỷ"
-              class="w-full rounded-lg border-2 border-slate-200 px-3 py-2 text-center font-mono text-base font-black outline-none focus:border-blue-600" />
-            <button data-add="${id}"
-              class="shrink-0 rounded-lg border-2 border-slate-300 px-4 py-2 text-xs font-black uppercase text-slate-700 transition hover:border-blue-600 active:scale-95 touch-manipulation">Cộng</button>
-          </div>
-        </div>`).join('');
-
-      scoreBlocks.addEventListener('click', (e) => {
-        const quick = e.target.closest('[data-delta]');
-        if (quick) { run(() => admin.updateScore(quick.dataset.team, Number(quick.dataset.delta))); return; }
-        const add = e.target.closest('[data-add]');
-        if (add) {
-          const id = add.dataset.add;
-          const input = scoreBlocks.querySelector(`[data-amt="${id}"]`);
-          const amt = Number(input.value);
-          if (!Number.isNaN(amt) && amt !== 0) {
-            run(() => admin.updateScore(id, amt)).then(() => { input.value = ''; });
-          }
-        }
-      });
-
-      /* ── 03 · QUIZ CONTROLLER ──────────────────────────────────────────── */
-      const answerKeyWrap = $('answer-key');
-      const renderAnswerKey = () => {
-        const base = 'rounded-lg py-3 text-base font-black uppercase transition active:scale-95 touch-manipulation';
-        answerKeyWrap.innerHTML = ['A', 'B', 'C', 'D'].map((opt) => `
-          <button data-key="${opt}"
-            class="${base} ${answerKey === opt ? 'bg-emerald-600 text-white' : 'border border-slate-200 bg-white text-slate-700'}">
-            ${opt}</button>`).join('')
-          + `<button data-key="" class="${base} text-xs ${answerKey === null ? 'bg-emerald-600 text-white' : 'border border-slate-200 bg-white text-slate-700'}">Tất cả</button>`;
+      const STEP_INDEX = {
+        [PHASES.LOBBY]: 0, [PHASES.ACCUMULATION]: 1, [PHASES.BLUE_OCEAN]: 2,
+        [PHASES.PHASE_3_CHECK]: 2, [PHASES.SUDDEN_DEATH]: 3, [PHASES.VICTORY]: 4,
       };
-      renderAnswerKey();
-      answerKeyWrap.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-key]');
-        if (!btn) return;
-        answerKey = btn.dataset.key === '' ? null : btn.dataset.key;
-        renderAnswerKey();
-      });
-
-      $('btn-reveal').addEventListener('click', () => run(async () => {
+      const revealNow = () => run(async () => {
         const { rewarded } = await admin.revealQuiz(answerKey);
-        return rewarded.length;
-      }));
+        return rewarded;
+      }, 'Đã chấm quiz');
+      const GUIDE = {
+        [PHASES.LOBBY]: { hint: 'Chờ các đội bấm SẴN SÀNG trên điện thoại. Đủ đội thì bắt đầu.',
+          actions: [{ label: 'Bắt đầu · Tích luỹ vốn', kind: 'go', ok: 'Đã sang Tích luỹ', run: () => admin.changePhase(PHASES.ACCUMULATION) }] },
+        [PHASES.ACCUMULATION]: { hint: 'Đọc câu hỏi, cho các đội trả lời, rồi chọn đáp án đúng và chấm.',
+          actions: [{ label: 'Hiện đáp án & chấm', kind: 'go', run: revealNow },
+                    { label: 'Sang chọn thị trường', kind: 'primary', ok: 'Đã sang Thị trường', run: () => admin.changePhase(PHASES.BLUE_OCEAN) }] },
+        [PHASES.BLUE_OCEAN]: { hint: 'Chờ các đội chọn thị trường, rồi tính kết quả để cộng vốn. Trùng thị trường sẽ chia đôi vốn.',
+          actions: [{ label: 'Tính kết quả thị trường', kind: 'primary', ok: 'Đã tính kết quả', run: () => admin.calculateBlueOceanResult() }] },
+        [PHASES.PHASE_3_CHECK]: { hint: 'Đang đối soát Top 1 và Top 2. Nếu hoà điểm, hệ thống chuyển sang Đấu thầu sinh tử.',
+          actions: [{ label: 'Xem bảng xếp hạng', kind: 'primary', ok: 'Đã về bảng xếp hạng', run: () => admin.changePhase(PHASES.PHASE_3_CHECK) }] },
+        [PHASES.SUDDEN_DEATH]: { hint: 'Hai đội dẫn đầu đặt giá thầu mù trên điện thoại. Chờ cả hai chốt rồi giải.',
+          actions: [{ label: 'Giải đấu thầu sinh tử', kind: 'danger', confirm: 'Giải vòng đấu thầu sinh tử? Công bố kết quả cuối cùng.', ok: 'Đã giải sinh tử', run: () => admin.resolveSuddenDeath() }] },
+        [PHASES.VICTORY]: { hint: 'Đã có nhà vô địch. Reset để bắt đầu ván mới.',
+          actions: [{ label: 'Reset ván mới', kind: 'danger', confirm: 'Reset toàn bộ ván chơi? Toàn bộ điểm sẽ về 0.', ok: 'Đã reset ván', run: () => store.resetGame() }] },
+      };
+      const KIND_CLS = { go: 'bg-emerald-600 hover:bg-emerald-700', primary: 'bg-blue-600 hover:bg-blue-700', danger: 'bg-red-600 hover:bg-red-700' };
 
-      /* ── 05 · LIVE RENDER ──────────────────────────────────────────────── */
-      const cheatRows = $('cheat-rows');
-      let lastScores = {};
+      /* ── stepper (also the phase nav) ── */
+      const renderStepper = () => {
+        const cur = STEP_INDEX[stateCache.currentPhase] ?? 0;
+        $('stepper').innerHTML = STEPS.map((s, i) => {
+          const done = i < cur, active = i === cur;
+          const cls = active ? 'border-blue-600 bg-blue-600 text-white'
+            : done ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+            : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300';
+          const badge = active ? `${i + 1}` : done
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="h-3.5 w-3.5"><polyline points="20 6 9 17 4 12"/></svg>'
+            : `${i + 1}`;
+          return `<button data-step="${s.key}" class="flex items-center justify-center gap-2 rounded-xl border-2 ${cls} px-3 py-3 text-sm font-black uppercase tracking-wide transition active:scale-95">
+            <span class="grid h-5 w-5 place-items-center rounded-full ${active ? 'bg-white/25' : done ? 'bg-emerald-500 text-white' : 'bg-slate-100'} text-[11px]">${badge}</span>
+            ${s.label}
+          </button>`;
+        }).join('');
+      };
+
+      /* ── guidance banner ── */
+      const renderGuide = () => {
+        const phase = stateCache.currentPhase || PHASES.LOBBY;
+        const g = GUIDE[phase] || GUIDE[PHASES.LOBBY];
+        const label = (STEPS[STEP_INDEX[phase] ?? 0] || {}).label || 'Trực tiếp';
+        $('guide-phase').textContent = label;
+        $('guide-hint').textContent = g.hint;
+        const wrap = $('guide-actions');
+        wrap.innerHTML = (g.actions || []).map((a, i) =>
+          `<button data-guide="${i}" class="rounded-xl ${KIND_CLS[a.kind] || KIND_CLS.primary} px-5 py-3 text-sm font-black uppercase tracking-wide text-white transition active:scale-95">${a.label}</button>`
+        ).join('');
+        wrap.querySelectorAll('[data-guide]').forEach((btn) => {
+          const a = g.actions[Number(btn.dataset.guide)];
+          btn.onclick = () => { if (a.confirm && !confirm(a.confirm)) return; run(a.run, a.ok); };
+        });
+      };
+
+      /* ── team cards (control + live status merged) ── */
+      const buildCards = () => {
+        $('team-cards').innerHTML = TEAM_IDS.map((id) => `
+          <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" data-block="${id}" style="border-top:6px solid ${COLOR[id]}">
+            <div class="flex items-center justify-between px-4 pt-3">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="rank grid h-6 w-6 shrink-0 place-items-center rounded-md bg-slate-100 font-mono text-xs font-black text-slate-500">-</span>
+                <span data-name class="truncate text-sm font-black uppercase tracking-wide">${TEAM_META[id].label}</span>
+              </div>
+              <span data-online class="flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"></span>
+            </div>
+            <p class="px-4 pt-1 font-mono text-3xl font-black text-slate-900" data-score>0 <span class="text-base text-slate-400">TỶ</span></p>
+            <div class="flex flex-wrap gap-1.5 px-4 pt-2 text-[11px] font-bold">
+              <span class="rounded-md bg-slate-100 px-2 py-1 text-slate-600">Đáp án <span data-answer class="text-slate-900">-</span></span>
+              <span class="rounded-md bg-slate-100 px-2 py-1 text-slate-600">TT <span data-choice class="text-slate-900">-</span></span>
+              <span class="rounded-md bg-slate-100 px-2 py-1 text-slate-600">Bid <span data-bid class="font-mono text-slate-900">-</span></span>
+            </div>
+            <div class="mt-3 grid grid-cols-4 gap-1 px-4">
+              <button data-delta="-5" data-team="${id}" class="rounded-lg border border-slate-200 py-2 text-xs font-black text-slate-600 transition hover:border-red-300 hover:text-red-600 active:scale-95">-5</button>
+              <button data-delta="-2" data-team="${id}" class="rounded-lg border border-slate-200 py-2 text-xs font-black text-slate-600 transition hover:border-red-300 hover:text-red-600 active:scale-95">-2</button>
+              <button data-delta="2" data-team="${id}" class="rounded-lg bg-blue-600 py-2 text-xs font-black text-white transition hover:bg-blue-700 active:scale-95">+2</button>
+              <button data-delta="5" data-team="${id}" class="rounded-lg bg-blue-600 py-2 text-xs font-black text-white transition hover:bg-blue-700 active:scale-95">+5</button>
+            </div>
+            <div class="flex gap-2 p-4 pt-2">
+              <input type="number" data-amt="${id}" placeholder="± tỷ" class="w-full rounded-lg border-2 border-slate-200 px-3 py-2 text-center font-mono text-sm font-black outline-none focus:border-blue-600" />
+              <button data-add="${id}" class="shrink-0 rounded-lg border-2 border-slate-300 px-3 py-2 text-xs font-black uppercase text-slate-700 transition hover:border-blue-600 active:scale-95">Cộng</button>
+            </div>
+          </div>`).join('');
+      };
+
+      /* ── live render ── */
       const render = () => {
-        $('cur-phase').textContent = stateCache.currentPhase || '-';
+        const phase = stateCache.currentPhase || PHASES.LOBBY;
+        const label = (STEPS[STEP_INDEX[phase] ?? 0] || {}).label || 'Trực tiếp';
+        $('cur-phase').textContent = label;
 
-        // Lock state on the toggle + header badge.
         const locked = stateCache.locked === true;
         const lockBtn = $('btn-lock');
         $('lock-icon').innerHTML = locked ? LOCK_SVG : UNLOCK_SVG;
-        $('lock-text').textContent = locked ? 'Mở khóa chọn đáp án' : 'Khóa chọn đáp án';
+        $('lock-text').textContent = locked ? 'Mở khóa thao tác' : 'Khóa thao tác của đội';
         lockBtn.classList.toggle('bg-red-600', locked);
         lockBtn.classList.toggle('text-white', locked);
         lockBtn.classList.toggle('border-red-600', locked);
@@ -318,60 +288,94 @@
         lockBtn.classList.toggle('border-amber-400', !locked);
         $('lock-badge').classList.toggle('hidden', !locked);
 
-        // Live stats strip.
-        const online = TEAM_IDS.filter((id) => teamsCache[id] && teamsCache[id].online).length;
-        const answered = TEAM_IDS.filter((id) => teamsCache[id] && teamsCache[id].answer != null).length;
-        const chosen = TEAM_IDS.filter((id) => teamsCache[id] && teamsCache[id].choice != null).length;
-        const bid = TEAM_IDS.filter((id) => teamsCache[id] && teamsCache[id].bidAmount != null).length;
-        $('stats').innerHTML =
-          `<span>Online <span class="text-emerald-600">${online}</span>/4</span>` +
-          `<span>Đã trả lời <span class="text-slate-900">${answered}</span></span>` +
-          `<span>Chọn TT <span class="text-slate-900">${chosen}</span></span>` +
-          `<span>Chốt bid <span class="text-slate-900">${bid}</span></span>`;
+        $('online-count').textContent = TEAM_IDS.filter((id) => teamsCache[id] && teamsCache[id].online).length;
 
-        // Score-block headers (flash on change).
+        renderStepper();
+        renderGuide();
+
+        const ranked = rankTeams(teamsCache);
+        const rankOf = {}; ranked.forEach((t, i) => { rankOf[t.id] = i + 1; });
+
         TEAM_IDS.forEach((id) => {
-          const block = scoreBlocks.querySelector(`[data-block="${id}"]`);
-          if (!block) return;
+          const card = $('team-cards').querySelector(`[data-block="${id}"]`);
+          if (!card) return;
           const t = teamsCache[id] || {};
           const score = Number(t.score) || 0;
-          block.querySelector('[data-name]').textContent = t.name || TEAM_META[id].label;
-          const scoreEl = block.querySelector('[data-score]');
+          card.querySelector('[data-name]').textContent = t.name || TEAM_META[id].label;
+          card.querySelector('.rank').textContent = `#${rankOf[id] || '-'}`;
+          const scoreEl = card.querySelector('[data-score]');
           scoreEl.innerHTML = `${formatNumber(score)} <span class="text-base text-slate-400">TỶ</span>`;
-          if (lastScores[id] != null && lastScores[id] !== score) flash(scoreEl);
+          if (lastScores[id] != null && lastScores[id] !== score) { scoreEl.classList.remove('flash'); void scoreEl.offsetWidth; scoreEl.classList.add('flash'); }
           lastScores[id] = score;
-        });
 
-        // Cheat table.
-        const contenders = Array.isArray(stateCache.suddenDeathTeams) ? stateCache.suddenDeathTeams : [];
-        cheatRows.innerHTML = TEAM_IDS.map((id) => {
-          const t = teamsCache[id] || {};
-          const isWinner = stateCache.winner === id;
-          const isContender = contenders.includes(id);
-          const rowClass = isWinner ? 'bg-emerald-50' : (isContender ? 'bg-red-50' : 'bg-white');
-          const onlineDot = t.online
-            ? '<span class="inline-flex items-center gap-1 text-emerald-600"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>ON</span>'
-            : '<span class="inline-flex items-center gap-1 text-slate-400"><span class="h-2 w-2 rounded-full bg-slate-300"></span>OFF</span>';
-          return `
-            <tr class="border-t border-slate-100 ${rowClass}">
-              <td class="px-3 py-2 whitespace-nowrap"><span class="inline-block h-2.5 w-2.5 rounded-sm ${TEAM_META[id].bg} align-middle"></span> ${TEAM_META[id].label}</td>
-              <td class="px-3 py-2 font-sans font-bold">${t.name || '-'}</td>
-              <td class="px-3 py-2 text-xs font-bold">${onlineDot}</td>
-              <td class="px-3 py-2 text-right font-black text-slate-900">${formatNumber(t.score || 0)}</td>
-              <td class="px-3 py-2 text-center">${t.answer || '-'}</td>
-              <td class="px-3 py-2 font-sans text-xs font-bold uppercase">${t.choice ? (MARKET_NAME[t.choice] || t.choice) : '-'}</td>
-              <td class="px-3 py-2 text-right">${t.bidAmount != null ? formatNumber(t.bidAmount) : '-'}</td>
-              <td class="px-3 py-2 text-xs text-slate-400">${t.timestamp ? formatTimeVN(t.timestamp) : '-'}</td>
-            </tr>`;
-        }).join('');
+          const on = t.online === true;
+          const onEl = card.querySelector('[data-online]');
+          onEl.className = `flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${on ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-400'}`;
+          onEl.innerHTML = `<span class="h-1.5 w-1.5 rounded-full ${on ? 'bg-emerald-500' : 'bg-slate-300'}"></span>${on ? 'On' : 'Off'}`;
 
-        // Keep strat-team option labels in sync with live names.
-        Array.from(stratTeam.options).forEach((o) => {
-          const t = teamsCache[o.value] || {};
-          o.textContent = t.name || TEAM_META[o.value].label;
+          card.querySelector('[data-answer]').textContent = t.answer || '-';
+          card.querySelector('[data-choice]').textContent = t.choice ? (MARKET_NAME[t.choice] || t.choice) : '-';
+          card.querySelector('[data-bid]').textContent = t.bidAmount != null ? formatNumber(t.bidAmount) : '-';
         });
       };
 
+      /* ── wiring ── */
+      $('stepper').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-step]');
+        if (btn) run(() => admin.changePhase(btn.dataset.step), 'Đã chuyển bước');
+      });
+
+      $('team-cards').addEventListener('click', (e) => {
+        const quick = e.target.closest('[data-delta]');
+        if (quick) { run(() => admin.updateScore(quick.dataset.team, Number(quick.dataset.delta)), 'Đã cập nhật điểm'); return; }
+        const add = e.target.closest('[data-add]');
+        if (add) {
+          const id = add.dataset.add;
+          const input = $('team-cards').querySelector(`[data-amt="${id}"]`);
+          const amt = Number(input.value);
+          if (!Number.isNaN(amt) && amt !== 0) run(() => admin.updateScore(id, amt), 'Đã cập nhật điểm').then(() => { input.value = ''; });
+          else showToast('Nhập số điểm khác 0', false);
+        }
+      });
+
+      // Quiz answer key
+      const answerKeyWrap = $('answer-key');
+      const renderAnswerKey = () => {
+        const base = 'rounded-xl py-3 text-base font-black uppercase transition active:scale-95';
+        answerKeyWrap.innerHTML = ['A', 'B', 'C', 'D'].map((opt) =>
+          `<button data-key="${opt}" class="${base} ${answerKey === opt ? 'bg-emerald-600 text-white' : 'border border-slate-200 bg-white text-slate-700'}">${opt}</button>`
+        ).join('') + `<button data-key="" class="${base} text-xs ${answerKey === null ? 'bg-emerald-600 text-white' : 'border border-slate-200 bg-white text-slate-700'}">Tất cả</button>`;
+      };
+      renderAnswerKey();
+      answerKeyWrap.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-key]');
+        if (!btn) return;
+        answerKey = btn.dataset.key === '' ? null : btn.dataset.key;
+        renderAnswerKey();
+      });
+      $('btn-reveal').addEventListener('click', revealNow);
+
+      // Strategic slider
+      const stratTeam = $('strat-team');
+      stratTeam.innerHTML = TEAM_IDS.map((id) => `<option value="${id}">${TEAM_META[id].label}</option>`).join('');
+      const stratRange = $('strat-range'), stratVal = $('strat-val');
+      stratRange.addEventListener('input', () => { stratVal.textContent = stratRange.value; });
+      $('strat-apply').addEventListener('click', () => {
+        const id = stratTeam.value, amt = Number(stratRange.value);
+        if (!id || amt === 0) { showToast('Chọn đội và điểm lớn hơn 0', false); return; }
+        run(() => admin.updateScore(id, amt, 'Tình huống chiến lược'), `Đã thưởng ${amt} tỷ`);
+      });
+
+      // Danger zone
+      $('btn-resolve').addEventListener('click', () => {
+        if (confirm('Giải vòng đấu thầu sinh tử? Công bố kết quả cuối cùng.')) run(() => admin.resolveSuddenDeath(), 'Đã giải sinh tử');
+      });
+      $('btn-lock').addEventListener('click', () => run(() => admin.setLock(stateCache.locked !== true), stateCache.locked !== true ? 'Đã khóa' : 'Đã mở khóa'));
+      $('btn-reset').addEventListener('click', () => {
+        if (confirm('Reset toàn bộ ván chơi? Toàn bộ điểm sẽ về 0.')) run(() => store.resetGame(), 'Đã reset ván');
+      });
+
+      buildCards();
       store.onState((s) => { stateCache = s; render(); });
       store.onTeams((t) => { teamsCache = t; render(); });
     });
