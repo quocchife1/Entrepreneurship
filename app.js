@@ -63,6 +63,80 @@ const MARKETS = Object.freeze({
   D: { name: "THỊ TRƯỜNG D", value: 20 },
 });
 
+/** Accumulation mini-game: fixed market-identification questions. */
+const ACCUMULATION_QUESTIONS = Object.freeze([
+  {
+    id: 1,
+    question: "Các quán ăn truyền thống, quán sinh viên bình dân gom lại trên một ứng dụng, cắt bỏ chi phí mặt bằng máy lạnh, chỉ bán mang đi với giá rất mềm và nhiều mã giảm giá.",
+    options: [
+      "Thị trường hiện có",
+      "Thị trường mới",
+      "Thị trường sao chép",
+      "Phân khúc lại - Giá rẻ",
+      "Phân khúc lại - Ngách",
+    ],
+    correct: "Phân khúc lại - Giá rẻ",
+    reward: 3,
+  },
+  {
+    id: 2,
+    question: "Mang mô hình đặt xe qua ứng dụng Grab hay Gojek, giống như Uber ở Mỹ, về triển khai tại Việt Nam, thay thế dần xe ôm truyền thống dựa trên thói quen đi xe máy của người Việt.",
+    options: [
+      "Thị trường hiện có",
+      "Thị trường mới",
+      "Thị trường sao chép",
+      "Phân khúc lại - Giá rẻ",
+      "Phân khúc lại - Ngách",
+    ],
+    correct: "Thị trường sao chép",
+    reward: 3,
+  },
+  {
+    id: 3,
+    question: "Ở thị trường ăn uống, trà sữa vốn đã có hàng ngàn thương hiệu lớn nhỏ. Nhưng startup này chỉ bán trà sữa pha từ sữa hạt, không dùng sữa bò, dùng đường ăn kiêng, nhắm thẳng vào nhóm người dị ứng lactose, người giảm cân hoặc người ăn chay trường.",
+    options: [
+      "Thị trường hiện có",
+      "Thị trường mới",
+      "Thị trường sao chép",
+      "Phân khúc lại - Giá rẻ",
+      "Phân khúc lại - Ngách",
+    ],
+    correct: "Phân khúc lại - Ngách",
+    reward: 3,
+  },
+  {
+    id: 4,
+    question: "Những sản phẩm như Kính thực tế ảo Apple Vision Pro hoặc vải sợi sen, sợi chuối đóng gói thành quần áo thời trang sinh học, mà trước đây người tiêu dùng chưa từng có khái niệm sở hữu, chưa rõ công dụng thực tế trong đời sống hàng ngày là gì, và startup phải tốn rất nhiều thời gian làm truyền thông để giải thích nó là gì và tại sao bạn cần nó.",
+    options: [
+      "Thị trường hiện có",
+      "Thị trường mới",
+      "Thị trường sao chép",
+      "Phân khúc lại - Giá rẻ",
+      "Phân khúc lại - Ngách",
+    ],
+    correct: "Thị trường mới",
+    reward: 3,
+  },
+  {
+    id: 5,
+    question: "Khi Mixue vào Việt Nam, thị trường kem và trà sữa đã rất quen thuộc. Quy mô lớn, khách hàng rõ ràng, không cần giáo dục thị trường. Chiến lược là không tạo ra món mới, nhưng đánh mạnh vào giá siêu rẻ nhờ tối ưu chuỗi cung ứng khổng lồ.",
+    options: [
+      "Thị trường hiện có",
+      "Thị trường mới",
+      "Thị trường sao chép",
+      "Phân khúc lại - Giá rẻ",
+      "Phân khúc lại - Ngách",
+    ],
+    correct: "Phân khúc lại - Giá rẻ",
+    reward: 3,
+  },
+]);
+
+function getAccumulationQuestion(index) {
+  const questionIndex = Number(index) - 1;
+  return ACCUMULATION_QUESTIONS[questionIndex] || null;
+}
+
 /* 3 ── Pure helpers ─────────────────────────────────────────────────────────*/
 
 /** Teams object → array `[{ id, name, score, … }]` sorted by score (desc),
@@ -136,6 +210,7 @@ class GameStore {
       state: {
         currentPhase: PHASES.LOBBY,
         currentQuestion: 0,
+        accumulationResult: null,
         activeMarket: null,
         winner: null,
         outcome: null,
@@ -239,8 +314,48 @@ class AdminController {
       await this.store.teamsRef.update(clear);
     }
 
+    if (phase !== PHASES.ACCUMULATION) {
+      await this.store.patchState({ currentQuestion: 0, accumulationResult: null });
+    }
+
     // Each new phase starts UNLOCKED — the host re-locks during the phase if needed.
     return this.store.patchState({ currentPhase: phase, locked: false });
+  }
+
+  async clearAccumulationRound() {
+    const clear = {};
+    TEAM_IDS.forEach((id) => {
+      clear[`${id}/answer`] = null;
+      clear[`${id}/timestamp`] = null;
+    });
+    await this.store.teamsRef.update(clear);
+  }
+
+  async setAccumulationQuestion(questionNumber) {
+    const nextQuestion = Number(questionNumber) || 0;
+    if (nextQuestion < 0 || nextQuestion > ACCUMULATION_QUESTIONS.length) {
+      throw new Error(`Unknown accumulation question: ${questionNumber}`);
+    }
+
+    await this.clearAccumulationRound();
+    return this.store.patchState({
+      currentPhase: PHASES.ACCUMULATION,
+      currentQuestion: nextQuestion,
+      accumulationResult: null,
+      locked: false,
+    });
+  }
+
+  async startAccumulationGame() {
+    return this.setAccumulationQuestion(1);
+  }
+
+  async advanceAccumulationQuestion() {
+    const state = await this.store.getState();
+    const current = Number(state.currentQuestion) || 0;
+    if (!current) return this.setAccumulationQuestion(1);
+    if (current >= ACCUMULATION_QUESTIONS.length) return this.setAccumulationQuestion(0);
+    return this.setAccumulationQuestion(current + 1);
   }
 
   /** Lock / unlock player input (quiz, market, bid). Host-controlled — players
@@ -429,59 +544,77 @@ class AdminController {
   }
 
   /**
-   * PHASE_1 reveal. Ranks the teams that answered by their answer `timestamp`
-   * (fastest first) and awards 30 / 20 / 10 / 5. If `correctKey` (A/B/C/D) is
-   * given, ONLY teams that answered correctly are ranked & rewarded; the rest get
-   * 0. Either way every team that answered gets a `quizResult` so their phone can
-   * flash a correct / wrong animation. `correctKey = null` → everyone who answered
-   * counts as correct, ranked purely by speed.
+   * PHASE_1 reveal. Scores the current fixed accumulation question.
+   * Every correct team receives +reward. Wrong answers receive 0.
    *
-   * @returns {Promise<{rewarded:string[], correctKey:?string}>}
+   * @returns {Promise<{questionId:number, rewarded:string[]}>}
    */
-  async revealQuiz(correctKey = null) {
+  async revealAccumulationQuestion() {
+    const state = await this.store.getState();
+    const currentQuestion = Number(state.currentQuestion) || 0;
+    const question = getAccumulationQuestion(currentQuestion);
+    if (!question) throw new Error("No active accumulation question.");
+
     const teams = await this.store.getTeams();
-    const answered = TEAM_IDS.filter(
-      (id) => teams[id] && teams[id].answer != null && teams[id].timestamp != null,
-    );
-
-    // Teams eligible for points, fastest first.
-    const eligible = answered
-      .filter((id) => !correctKey || teams[id].answer === correctKey)
-      .sort((a, b) => Number(teams[a].timestamp) - Number(teams[b].timestamp));
-
-    const points = [30, 20, 10, 5];
-
-    // Award points + wallet log (updateScore handles both).
-    for (let i = 0; i < eligible.length; i += 1) {
-      const pts = points[i] || 0;
-      if (pts > 0) await this.updateScore(eligible[i], pts, 'Kết quả đúng');
-    }
-
-    // Flag every answering team so their screen can react (✓ / ✗ + points), and
-    // clear their answer/timestamp so the NEXT question starts fresh (the player's
-    // phone re-opens the answer buttons once the result animation finishes).
     const results = {};
+    const teamResults = {};
+    const rewarded = [];
     const now = firebase.database.ServerValue.TIMESTAMP;
-    for (const id of answered) {
-      const isCorrect = correctKey ? teams[id].answer === correctKey : true;
-      const rank = eligible.indexOf(id);
-      results[`${id}/quizResult`] = {
-        correct: isCorrect,
-        points: isCorrect && rank > -1 ? (points[rank] || 0) : 0,
-        at: now,
+    for (const id of TEAM_IDS) {
+      const teamData = teams[id] || {};
+      const answer = teamData.answer != null ? teamData.answer : null;
+      const answered = answer != null;
+      const isCorrect = answered && answer === question.correct;
+      const points = isCorrect ? question.reward : 0;
+
+      teamResults[id] = {
+        answered,
+        answer,
+        correct: answered ? isCorrect : false,
+        points,
       };
+
       results[`${id}/answer`] = null;
       results[`${id}/timestamp`] = null;
-      // Wrong answers earn nothing, so they get no updateScore log — push a
-      // history line here so the player still sees "Kết quả sai".
-      if (!isCorrect) {
+
+      if (!answered) continue;
+
+      results[`${id}/quizResult`] = {
+        correct: isCorrect,
+        points,
+        answer,
+        correctAnswer: question.correct,
+        questionId: question.id,
+        at: now,
+      };
+
+      if (isCorrect) {
+        rewarded.push(id);
+        await this.updateScore(id, points, `Câu ${currentQuestion} đúng`);
+      } else {
         const k = this.store.teamsRef.child(id).child('log').push().key;
-        results[`${id}/log/${k}`] = { amount: 0, note: 'Kết quả sai', at: now };
+        results[`${id}/log/${k}`] = { amount: 0, note: `Câu ${currentQuestion} sai`, at: now };
       }
     }
-    if (Object.keys(results).length) await this.store.teamsRef.update(results);
 
-    return { rewarded: eligible, correctKey };
+    if (Object.keys(results).length) await this.store.teamsRef.update(results);
+    await this.store.patchState({
+      accumulationResult: {
+        questionId: question.id,
+        question: question.question,
+        correct: question.correct,
+        options: question.options,
+        reward: question.reward,
+        teamResults,
+        revealedAt: now,
+      },
+    });
+
+    return { questionId: question.id, rewarded };
+  }
+
+  async revealQuiz() {
+    return this.revealAccumulationQuestion();
   }
 }
 
@@ -509,6 +642,7 @@ window.BlueOcean = {
   TEAM_IDS,
   TEAM_META,
   MARKETS,
+  ACCUMULATION_QUESTIONS,
   rankTeams,
   formatNumber,
   formatTimeVN,

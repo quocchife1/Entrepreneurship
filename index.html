@@ -49,9 +49,34 @@
     model-viewer::part(default-progress-bar) { display: none; }
     /* Điện thoại xoay ngang (màn thấp): thu nhỏ linh vật để nút bấm luôn nằm
        trong khung, tránh hình chiếm hết chỗ. */
+    @media (max-height: 760px) {
+      #screen-join {
+        gap: 0.75rem !important;
+        justify-content: flex-start !important;
+        padding-top: 0.25rem !important;
+        padding-bottom: 0.25rem !important;
+      }
+      #join-mascot {
+        height: 5.75rem !important;
+        width: 5.75rem !important;
+      }
+      #join-team-helper {
+        display: none !important;
+      }
+      #join-name {
+        padding-top: 0.7rem !important;
+        padding-bottom: 0.7rem !important;
+      }
+      #join-btn {
+        min-height: 48px !important;
+        padding-top: 0.85rem !important;
+        padding-bottom: 0.85rem !important;
+      }
+      main { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+    }
     @media (max-height: 560px) {
-      [data-img] { height: 6rem !important; width: 6rem !important; }
-      main { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+      #join-mascot { height: 4.5rem !important; width: 4.5rem !important; }
+      main { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
     }
     @media (prefers-reduced-motion: reduce) {
       .bob, .pulse-soft { animation: none !important; }
@@ -74,35 +99,48 @@
     <radialGradient id="coinG" cx="38%" cy="30%" r="80%"><stop offset="0%" stop-color="#FFE9A8"/><stop offset="45%" stop-color="#F4B740"/><stop offset="100%" stop-color="#B8860B"/></radialGradient>
   </defs></svg>
 
-  <main class="mx-auto w-full max-w-md flex-1 min-h-0 overflow-y-auto px-5 pb-4 pt-4 sm:max-w-2xl lg:max-w-4xl">
+  <main class="mx-auto w-full max-w-md flex-1 min-h-0 overflow-y-auto px-5 pb-[5rem] pt-4 sm:max-w-2xl sm:pb-[5.75rem] lg:max-w-6xl xl:max-w-7xl">
 
     <!-- ── SCREEN: JOIN ──────────────────────────────────────────────────── -->
-    <section id="screen-join" class="screen flex-1 flex-col justify-center gap-5">
-      <div data-img="than-tai-welcome-half.png" data-alt="Thần Tài chào đón" class="mx-auto grid h-56 w-56 place-items-center"></div>
-      <div class="text-center">
-        <p class="text-xs font-semibold uppercase tracking-[0.3em]" style="color:#8A6522">Ứng dụng đội chơi</p>
-        <h1 class="mt-1.5 font-display text-[clamp(2.5rem,13vw,3.75rem)] font-extrabold uppercase leading-none tracking-tight" style="color:#14110B">Market <span style="color:#B98A3E">Fit</span></h1>
-        <p class="mt-1.5 text-sm font-extrabold uppercase tracking-[0.14em]" style="color:#6B6459">Độc chiếm thị trường</p>
-      </div>
+    <section id="screen-join" class="screen flex-1 flex-col justify-start gap-4 pt-2 sm:justify-center sm:gap-5 sm:pt-0 lg:justify-center">
+      <div class="grid w-full gap-4 lg:min-h-[calc(100dvh-2rem)] lg:grid-cols-[0.92fr_1.08fr] lg:content-center lg:items-center lg:gap-8 xl:min-h-[calc(100dvh-2.5rem)]">
+        <div class="flex flex-col items-center gap-3 text-center lg:items-start lg:text-left">
+          <div id="join-mascot" data-img="than-tai-welcome-half.png" data-alt="Thần Tài chào đón" class="mx-auto grid h-[clamp(5.75rem,14vh,13rem)] w-[clamp(5.75rem,14vh,13rem)] place-items-center lg:mx-0"></div>
+          <div>
+            <p class="text-[10px] font-semibold uppercase tracking-[0.28em] sm:text-xs" style="color:#8A6522">Ứng dụng đội chơi</p>
+            <h1 class="mt-1.5 font-display text-[clamp(2.15rem,7vw,4.75rem)] font-extrabold uppercase leading-none tracking-tight" style="color:#14110B">Market <span style="color:#B98A3E">Fit</span></h1>
+            <p class="mt-1 text-[10px] font-extrabold uppercase tracking-[0.14em] sm:mt-1.5 sm:text-sm" style="color:#6B6459">Độc chiếm thị trường</p>
+          </div>
+          <p class="hidden max-w-[36ch] text-sm font-medium leading-relaxed text-[#A39B8D] lg:block">Chọn đội, nhập tên, tham gia ngay. Bố cục này tự nén cho điện thoại và mở rộng trên laptop để không còn khoảng trống lớn.</p>
+        </div>
 
-      <div class="flex flex-col gap-3">
-        <p class="text-xs font-semibold uppercase tracking-[0.2em]" style="color:#6B6459">Chọn đội của bạn</p>
-        <div id="team-picker" class="grid grid-cols-2 gap-3"></div>
-        <p class="text-xs font-medium leading-relaxed" style="color:#A39B8D">Đội còn trống có thể chọn. Lỡ thoát ra? Chọn lại đúng đội cũ, dữ liệu vẫn còn.</p>
-      </div>
+        <div class="rounded-3xl border bg-white/80 p-4 shadow-[0_12px_40px_rgba(185,138,62,0.08)] backdrop-blur-sm sm:p-5 lg:p-6" style="border-color:#E7E3DA">
+          <div class="flex flex-col gap-3">
+            <div class="flex items-end justify-between gap-3">
+              <div>
+                <p class="text-[10px] font-semibold uppercase tracking-[0.18em] sm:text-xs" style="color:#6B6459">Chọn đội của bạn</p>
+                <p id="join-team-helper" class="mt-1 text-xs font-medium leading-relaxed" style="color:#A39B8D">Đội còn trống có thể chọn. Lỡ thoát ra? Chọn lại đúng đội cũ, dữ liệu vẫn còn.</p>
+              </div>
+              <span class="hidden rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#8A6522] sm:inline" style="border-color:#E7E3DA;background:#F7F5F0">1 bước</span>
+            </div>
 
-      <div class="flex flex-col gap-2">
-        <label for="join-name" class="text-xs font-semibold uppercase tracking-[0.2em]" style="color:#6B6459">Tên đội</label>
-        <input id="join-name" type="text" inputmode="text" autocomplete="off" placeholder="Nhập tên đội"
-               class="w-full rounded-xl border px-4 py-3.5 text-xl font-bold uppercase tracking-wide outline-none"
-               style="background:#FFFFFF;border-color:#E7E3DA;color:#14110B" />
-      </div>
+            <div id="team-picker" class="grid grid-cols-2 gap-3"></div>
 
-      <button id="join-btn" disabled
-              class="min-h-[56px] w-full rounded-xl py-4 text-xl font-display font-extrabold uppercase tracking-widest transition active:scale-95 touch-manipulation select-none"
-              style="background:#EDEAE3;color:#A39B8D">
-        Tham gia
-      </button>
+            <div class="flex flex-col gap-2">
+              <label for="join-name" class="text-[10px] font-semibold uppercase tracking-[0.18em] sm:text-xs" style="color:#6B6459">Tên đội</label>
+              <input id="join-name" type="text" inputmode="text" autocomplete="off" placeholder="Nhập tên đội"
+                     class="w-full rounded-xl border px-4 py-2.5 text-base font-bold uppercase tracking-wide outline-none sm:py-3.5 sm:text-xl"
+                     style="background:#FFFFFF;border-color:#E7E3DA;color:#14110B" />
+            </div>
+
+            <button id="join-btn" disabled
+                    class="min-h-[48px] w-full rounded-xl py-3 text-lg font-display font-extrabold uppercase tracking-widest transition active:scale-95 touch-manipulation select-none sm:min-h-[56px] sm:py-4 sm:text-xl"
+                    style="background:#EDEAE3;color:#A39B8D">
+              Tham gia
+            </button>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ── SCREEN: WAIT ──────────────────────────────────────────────────── -->
@@ -113,9 +151,23 @@
     </section>
 
     <!-- ── SCREEN: QUIZ ──────────────────────────────────────────────────── -->
-    <section id="screen-quiz" class="screen flex-1 flex-col gap-4">
-      <p class="text-center text-sm font-semibold uppercase tracking-[0.2em]" style="color:#6B6459">Chọn đáp án</p>
-      <div id="quiz-grid" class="grid flex-1 grid-cols-2 gap-3"></div>
+    <section id="screen-quiz" class="screen flex-1 flex-col justify-center gap-4">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <p class="text-xs font-semibold uppercase tracking-[0.2em]" style="color:#6B6459">Mini game nhận diện kiểu thị trường</p>
+          <p id="quiz-counter" class="font-display text-2xl font-extrabold uppercase tracking-tight" style="color:#14110B">Câu 1 / 5</p>
+        </div>
+        <div id="quiz-mini-state" class="flex items-center gap-2 rounded-full border px-3 py-1.5" style="background:#FFFFFF;border-color:#E7E3DA">
+          <span id="quiz-mini-dot" class="h-2.5 w-2.5 rounded-full bg-[#B98A3E]"></span>
+          <span id="quiz-mini-state-label" class="text-xs font-semibold uppercase tracking-[0.18em]" style="color:#6B6459">Đang chờ</span>
+        </div>
+      </div>
+      <p id="quiz-question" class="rounded-2xl border px-4 py-4 text-[clamp(1.05rem,4vw,1.45rem)] font-semibold leading-relaxed" style="background:#FFFFFF;border-color:#E7E3DA;color:#14110B"></p>
+      <div id="quiz-status-card" class="rounded-2xl border px-4 py-4" style="background:#F7F5F0;border-color:#E7E3DA">
+        <p class="text-xs font-semibold uppercase tracking-[0.2em]" style="color:#6B6459">Trạng thái của đội</p>
+        <p id="quiz-status-main" class="mt-1 text-xl font-display font-extrabold uppercase tracking-tight" style="color:#14110B">Chọn 1 đáp án</p>
+      </div>
+      <div id="quiz-grid" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"></div>
     </section>
 
     <!-- ── SCREEN: MARKET ────────────────────────────────────────────────── -->
@@ -152,10 +204,24 @@
   </main>
 
   <!-- ── HISTORY PANEL ─────────────────────────────────────────────────────── -->
-  <section id="history-panel" style="display:none;background:#FFFFFF;border-color:#E7E3DA" class="shrink-0 border-t" >
-    <div class="mx-auto w-full max-w-md px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:max-w-2xl lg:max-w-4xl">
-      <p class="mb-2 text-xs font-bold uppercase tracking-[0.2em]" style="color:#A39B8D">Quá trình chơi · giờ VN</p>
-      <div id="wallet-list" class="max-h-[30vh] space-y-2 overflow-y-auto"></div>
+  <section id="history-panel" aria-label="Lịch sử cộng điểm" class="fixed inset-x-0 bottom-0 z-20 translate-y-[calc(100%-3.5rem)] transition-transform duration-300 ease-out">
+    <div class="mx-auto w-full max-w-md px-5 sm:max-w-2xl lg:max-w-6xl xl:max-w-7xl">
+      <div class="overflow-hidden rounded-t-3xl border border-b-0 bg-white shadow-[0_-12px_40px_rgba(20,17,11,0.12)]" style="border-color:#E7E3DA">
+        <button id="history-toggle" type="button" class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition active:scale-[0.995]">
+          <div class="min-w-0">
+            <p class="text-[10px] font-bold uppercase tracking-[0.2em]" style="color:#A39B8D">Quá trình chơi · giờ VN</p>
+            <p id="history-summary" class="truncate font-display text-lg font-extrabold uppercase tracking-tight" style="color:#14110B">Đang ẩn bảng lịch sử</p>
+          </div>
+          <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full border transition-transform duration-300" style="border-color:#E7E3DA;background:#F7F5F0;color:#8A6522">
+            <svg id="history-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 transition-transform duration-300"><polyline points="6 15 12 9 18 15"/></svg>
+          </span>
+        </button>
+        <div id="history-body" class="max-h-0 overflow-hidden transition-[max-height] duration-300 ease-out">
+          <div class="px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-1 sm:px-5">
+            <div id="wallet-list" class="max-h-[28vh] space-y-2 overflow-y-auto"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -221,16 +287,33 @@
         const img = el.dataset.img;
         if (el._ttImg === img) return;
         el._ttImg = img;
+        // Neo tuyệt đối: cho ảnh 1 khung xác định để object-fit:contain gói gọn
+        // trong khung, không tràn xuống làm mất chân nhân vật.
+        el.style.position = 'relative';
         el.innerHTML = TT_FALLBACK;
-        if (img && await assetExists(`./assets/${img}`)) el.innerHTML = `<img src="./assets/${img}" alt="${el.dataset.alt || 'Thần Tài'}" style="width:100%;height:100%;object-fit:contain;object-position:bottom" />`;
+        if (img && await assetExists(`./assets/${img}`)) el.innerHTML = `<img src="./assets/${img}" alt="${el.dataset.alt || 'Thần Tài'}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:bottom" />`;
       };
       const waitTT = document.getElementById('wait-tt');
       document.querySelectorAll('[data-img]').forEach(mountTT);
 
       /* ── Wallet drawer (menu 3 gạch ở màn kết thúc) ── */
       const walletList = document.getElementById('wallet-list'), walletHome = walletList.parentElement;
+      const historyPanel = document.getElementById('history-panel');
+      const historyBody = document.getElementById('history-body');
+      const historyToggle = document.getElementById('history-toggle');
+      const historyChevron = document.getElementById('history-chevron');
+      const historySummary = document.getElementById('history-summary');
       const walletFab = document.getElementById('wallet-fab'), walletModal = document.getElementById('wallet-modal'), walletModalBody = document.getElementById('wallet-modal-body');
       const mainEl = document.querySelector('main'), finalScreen = document.getElementById('final-screen');
+      let historyOpen = false;
+      const syncHistoryDrawer = () => {
+        const canShow = joined && stateCache.currentPhase !== PHASES.VICTORY;
+        historyPanel.style.display = canShow ? 'block' : 'none';
+        historyPanel.style.transform = canShow && historyOpen ? 'translateY(0)' : 'translateY(calc(100% - 3.5rem))';
+        historyBody.style.maxHeight = canShow && historyOpen ? '30vh' : '0px';
+        historyChevron.style.transform = historyOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+      };
+      historyToggle.addEventListener('click', () => { historyOpen = !historyOpen; syncHistoryDrawer(); });
       walletFab.addEventListener('click', () => { walletModal.style.display = 'flex'; });
       document.getElementById('wallet-close').addEventListener('click', () => { walletModal.style.display = 'none'; });
       walletModal.addEventListener('click', (e) => { if (e.target === walletModal) walletModal.style.display = 'none'; });
@@ -325,10 +408,10 @@
           else { bg = '#FFFFFF'; bd = '#E7E3DA'; fg = '#14110B'; sfg = '#A39B8D'; }
           const sub = takenByOther ? 'ĐANG CHƠI' : (t.ready && t.name ? t.name : 'CÒN TRỐNG');
           return `<button data-team="${id}" ${takenByOther ? 'disabled' : ''}
-            class="flex min-h-[64px] flex-col items-center justify-center gap-0.5 rounded-xl border-2 px-3 py-3 font-display text-lg font-extrabold uppercase tracking-wide transition active:scale-95 touch-manipulation select-none"
+            class="flex min-h-[clamp(3rem,6vh,4rem)] flex-col items-center justify-center gap-0.5 rounded-xl border-2 px-3 py-2 font-display text-[clamp(0.9rem,2.6vw,1.1rem)] font-extrabold uppercase tracking-wide transition active:scale-95 touch-manipulation select-none"
             style="background:${bg};border-color:${bd};color:${fg}">
             <span>${TEAM_META[id].label}</span>
-            <span class="truncate text-[10px] font-bold" style="color:${sfg}">${sub}</span>
+            <span class="truncate text-[9px] font-bold leading-none" style="color:${sfg}">${sub}</span>
           </button>`;
         }).join('');
       };
@@ -346,20 +429,44 @@
         joined = true; joinedSession = stateCache.session || null; coinBurst(20); render();
       });
 
-      /* ── QUIZ ── */
+      /* ── ACCUMULATION MINI GAME ── */
       const quizGrid = $('quiz-grid');
-      quizGrid.innerHTML = ['A', 'B', 'C', 'D'].map((opt) => `
-        <button data-opt="${opt}" data-text="${opt}"
-          class="flex min-h-[22vh] items-center justify-center rounded-xl border-2 transition active:scale-95 touch-manipulation select-none"
-          style="background:#FFFFFF;border-color:#E7E3DA;color:#14110B">
-          <span data-label class="font-display text-[clamp(2.75rem,15vw,4.5rem)] font-extrabold leading-none">${opt}</span>
-        </button>`).join('');
-      const quizButtons = Array.from(quizGrid.querySelectorAll('button'));
+      const quizCounter = $('quiz-counter');
+      const quizQuestion = $('quiz-question');
+      const quizStatusMain = $('quiz-status-main');
+      const quizMiniStateLabel = $('quiz-mini-state-label');
+      const quizMiniDot = $('quiz-mini-dot');
+      const getActiveQuestion = () => {
+        const questionIndex = Number(stateCache.currentQuestion) || 0;
+        return questionIndex > 0 ? (window.BlueOcean.ACCUMULATION_QUESTIONS[questionIndex - 1] || null) : null;
+      };
+      const renderQuiz = () => {
+        const question = getActiveQuestion();
+        if (!question) return;
+        const total = window.BlueOcean.ACCUMULATION_QUESTIONS.length;
+        const team = teamsCache[myTeamId] || {};
+        const selected = team.answer || null;
+        const revealed = !!(stateCache.accumulationResult && stateCache.accumulationResult.questionId === question.id);
+
+        quizCounter.textContent = `Câu ${question.id} / ${total}`;
+        quizQuestion.textContent = question.question;
+        quizMiniStateLabel.textContent = revealed ? 'Đã công bố' : (selected ? 'Đã ghi nhận' : 'Đang chờ');
+        quizMiniDot.style.background = revealed ? '#059669' : (selected ? '#B98A3E' : '#D97706');
+        quizStatusMain.textContent = revealed ? 'Đáp án đã hiện' : (selected ? '✓ Đã ghi nhận đáp án' : 'Chọn 1 đáp án');
+
+        quizGrid.innerHTML = question.options.map((opt) => {
+          const active = selected === opt;
+          return `<button data-answer="${opt}"
+            class="min-h-[56px] rounded-xl border-2 px-3 py-3 text-center font-display text-[clamp(0.95rem,3.2vw,1.15rem)] font-extrabold uppercase leading-snug transition active:scale-95 touch-manipulation select-none"
+            style="background:${active ? '#B98A3E' : '#FFFFFF'};border-color:${active ? '#B98A3E' : '#E7E3DA'};color:${active ? '#FFFFFF' : '#14110B'}">${opt}</button>`;
+        }).join('');
+      };
+
       quizGrid.addEventListener('click', async (e) => {
-        const btn = e.target.closest('[data-opt]');
-        if (!btn || btn.disabled) return;
-        await store.patchTeam(myTeamId, { answer: btn.dataset.opt, timestamp: firebase.database.ServerValue.TIMESTAMP });
-        lockGroup(quizButtons, btn);
+        const btn = e.target.closest('[data-answer]');
+        if (!btn || !myTeamId) return;
+        await store.patchTeam(myTeamId, { answer: btn.dataset.answer, timestamp: firebase.database.ServerValue.TIMESTAMP });
+        renderQuiz();
       });
 
       /* ── MARKET ── */
@@ -430,7 +537,7 @@
         overlay.style.display = 'flex'; overlay.classList.add(correct ? 'result-pop' : 'result-shake');
         if (correct) coinBurst(18);
         clearTimeout(resultTimer);
-        resultTimer = setTimeout(() => { overlay.style.display = 'none'; overlay.classList.remove('result-pop', 'result-shake'); unlockGroup(quizButtons); }, 3000);
+        resultTimer = setTimeout(() => { overlay.style.display = 'none'; overlay.classList.remove('result-pop', 'result-shake'); }, 3000);
       };
 
       /* ── WALLET ── */
@@ -438,7 +545,12 @@
         const log = (teamsCache[myTeamId] && teamsCache[myTeamId].log) || {};
         const rows = Object.values(log).filter((e) => e && e.at).sort((a, b) => Number(b.at) - Number(a.at));
         const list = $('wallet-list');
-        if (!rows.length) { list.innerHTML = '<p class="py-6 text-center text-sm font-semibold" style="color:#A39B8D">Chưa có giao dịch</p>'; walletInit = true; lastWalletAt = 0; return; }
+        if (!rows.length) {
+          list.innerHTML = '<p class="py-6 text-center text-sm font-semibold" style="color:#A39B8D">Chưa có giao dịch</p>';
+          historySummary.textContent = 'Chưa có giao dịch nào';
+          walletInit = true; lastWalletAt = 0; syncHistoryDrawer(); return;
+        }
+        historySummary.textContent = `${rows.length} giao dịch gần nhất`;
         list.innerHTML = rows.map((e) => {
           const amt = Number(e.amount), tone = amt > 0 ? '#059669' : (amt < 0 ? '#B0322E' : '#A39B8D'), sign = amt > 0 ? '+' : '';
           return `<div class="flex items-center justify-between border-b pb-2" style="border-color:#EDE8DE">
@@ -486,15 +598,22 @@
         const phase = stateCache.currentPhase || PHASES.LOBBY;
         const isContender = Array.isArray(stateCache.suddenDeathTeams) && stateCache.suddenDeathTeams.includes(myTeamId);
         const key = `${phase}:${isContender}`;
-        if (key !== lastKey) { unlockGroup(quizButtons); resetMarket(); resetBid(); lastKey = key; if (phase === PHASES.VICTORY) coinBurst(40); }
+        if (key !== lastKey) { resetMarket(); resetBid(); lastKey = key; if (phase === PHASES.VICTORY) coinBurst(40); }
         applyLockShield();
+
+        const activeQuestion = getActiveQuestion();
+        if (phase === PHASES.ACCUMULATION && activeQuestion) renderQuiz();
 
         const setWait = (title, gold) => {
           const el = $('wait-title'); el.textContent = title; el.style.color = gold ? '#B98A3E' : '#14110B';
           $('wait-score').textContent = formatNumber((teamsCache[myTeamId] && teamsCache[myTeamId].score) || 0);
         };
         switch (phase) {
-          case PHASES.ACCUMULATION: showScreen('screen-quiz'); break;
+          case PHASES.ACCUMULATION:
+            if (activeQuestion) showScreen('screen-quiz');
+            else setWait('Chờ mini game');
+            if (!activeQuestion) showScreen('screen-wait');
+            break;
           case PHASES.BLUE_OCEAN: showScreen('screen-market'); break;
           case PHASES.SUDDEN_DEATH:
             if (isContender) { const budget = teamsCache[myTeamId] ? Number(teamsCache[myTeamId].score) || 0 : 0; $('bid-budget').textContent = formatNumber(budget); bidInput.max = budget; showScreen('screen-bid'); }
@@ -512,7 +631,7 @@
 
         // Màn kết thúc: ẩn panel lịch sử dưới, hiện nút 3 gạch mở drawer.
         const isFinal = phase === PHASES.VICTORY;
-        $('history-panel').style.display = (joined && !isFinal) ? 'block' : 'none';
+        syncHistoryDrawer();
         finalScreen.style.display = (joined && isFinal) ? 'block' : 'none';
         mainEl.style.display = (joined && isFinal) ? 'none' : 'flex';
         if (isFinal) { if (walletList.parentElement !== walletModalBody) walletModalBody.appendChild(walletList); }

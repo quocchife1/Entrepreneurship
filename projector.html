@@ -134,7 +134,7 @@
   <section id="screen-lobby" class="screen screen-wrap absolute inset-0 z-10 items-center justify-center px-[4vw] pb-[3vh] pt-[8vh]">
     <div class="fit flex flex-col items-center justify-center gap-[4vh] lg:flex-row lg:gap-[4vw]">
       <!-- Thần Tài chào đón (ảnh 2D · fallback xu vàng) -->
-      <div data-reveal data-img="than-tai-welcome.png" data-alt="Thần Tài chào đón khai game" class="bob relative z-0 grid h-[clamp(14rem,60vh,46rem)] w-[clamp(11rem,30vw,40rem)] shrink-0 place-items-center"></div>
+      <div data-reveal data-img="than-tai-welcome.png" data-alt="Thần Tài chào đón khai game" class="bob relative z-0 grid h-[clamp(18rem,78vh,52rem)] w-[clamp(16rem,40vw,50rem)] shrink-0 place-items-center pb-[2vh]"></div>
       <!-- Brand -->
       <div class="relative z-10 flex flex-col items-center gap-[2vh] text-center lg:items-start lg:text-left">
         <p data-reveal class="fluid-label rounded-full px-4 py-1.5 font-semibold uppercase tracking-[0.26em]" style="background:rgba(185,138,62,.12);color:#8A6522">Thần Tài tập khởi nghiệp</p>
@@ -177,6 +177,40 @@
         <p class="fluid-label rounded-full border px-4 py-1.5 font-semibold uppercase tracking-[0.2em]" style="background:#FFFFFF;border-color:#E7E3DA;color:#6B6459">Đơn vị · tỷ đồng</p>
       </div>
       <div id="board" class="grid grid-cols-2 items-end gap-[2vw] lg:grid-cols-4"></div>
+    </div>
+  </section>
+
+  <!-- ── SCREEN: ACCUMULATION MINI GAME ───────────────────────────────────── -->
+  <section id="screen-accumulation" class="screen screen-wrap absolute inset-0 z-10 items-center justify-center px-[3vw] pb-[2vh] pt-[4vh]">
+    <div class="fit flex w-full flex-col gap-[2vh]">
+      <div data-reveal class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <span class="coin3d h-[8vh] w-[8vh] bob"><span class="cin"><span class="coin-face"></span><span class="coin-face back"></span></span></span>
+          <h2 class="font-display text-[clamp(2rem,5.8vw,5rem)] font-extrabold uppercase tracking-tight" style="color:#14110B">Nhận diện kiểu thị trường</h2>
+        </div>
+        <p id="acc-pill" class="rounded-full border px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.22em] sm:text-xs" style="background:#FFFFFF;border-color:#E7E3DA;color:#6B6459">Câu 0 / 5</p>
+      </div>
+
+      <div class="grid min-h-[calc(100dvh-12vh)] gap-[2vh] lg:grid-cols-[1.15fr_0.85fr]">
+        <div data-reveal class="flex flex-col rounded-[2rem] border p-[2.4vh] shadow-sm" style="background:#FFFFFF;border-color:#E7E3DA">
+          <p class="fluid-label font-semibold uppercase tracking-[0.24em]" style="color:#A39B8D">Tình huống</p>
+          <p id="acc-question" class="mt-2 flex-1 font-display text-[clamp(2rem,5vw,4.8rem)] font-extrabold leading-[0.96] tracking-tight" style="color:#14110B">Chưa bắt đầu mini game.</p>
+        </div>
+
+        <div data-reveal class="flex flex-col rounded-[2rem] border p-[2.4vh] shadow-sm" style="background:#FFFFFF;border-color:#E7E3DA">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <p class="fluid-label font-semibold uppercase tracking-[0.24em]" style="color:#A39B8D">Đáp án đúng</p>
+            <p id="acc-result-tag" class="rounded-full bg-slate-100 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.22em]" style="color:#6B6459">Chờ công bố</p>
+          </div>
+          <p id="acc-answer" class="mt-2 font-display text-[clamp(1.9rem,5vw,4rem)] font-extrabold uppercase leading-[0.96] tracking-tight" style="color:#B98A3E">Chưa công bố</p>
+          <p id="acc-reward" class="mt-2 text-[clamp(1rem,1.7vw,1.4rem)] font-bold uppercase tracking-[0.18em]" style="color:#6B6459">+3 tỷ cho mỗi đội đúng</p>
+          <div class="mt-4 flex items-center justify-between gap-2">
+            <p class="fluid-label font-semibold uppercase tracking-[0.24em]" style="color:#A39B8D">Trạng thái đội</p>
+            <span class="text-[10px] font-semibold uppercase tracking-[0.18em]" style="color:#A39B8D">Đúng / Sai / Chờ</span>
+          </div>
+          <div id="acc-progress" class="mt-3 grid grid-cols-1 gap-2 xl:grid-cols-2"></div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -236,7 +270,7 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const { store, PHASES, TEAM_IDS, TEAM_META, MARKETS, rankTeams, formatNumber } = window.BlueOcean;
+      const { store, PHASES, TEAM_IDS, TEAM_META, MARKETS, ACCUMULATION_QUESTIONS, rankTeams, formatNumber } = window.BlueOcean;
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       const COLOR = { team1: '#4F46E5', team2: '#059669', team3: '#D97706', team4: '#E11D48' };
@@ -263,9 +297,13 @@
         const img = el.dataset.img;
         if (el._ttImg === img) return;
         el._ttImg = img;
+        // Neo tuyệt đối để ảnh LUÔN vừa khít khung (grid + height:100% không giải
+        // được % nên ảnh tràn xuống, mất chân). inset:0 cho ảnh 1 khung xác định
+        // để object-fit:contain letterbox gọn trong khung, không bao giờ tràn.
+        el.style.position = 'relative';
         el.innerHTML = TT_FALLBACK; // xu vàng khi chưa có ảnh
         if (img && await assetExists(`./assets/${img}`)) {
-          el.innerHTML = `<img src="./assets/${img}" alt="${el.dataset.alt || 'Thần Tài'}" style="width:100%;height:100%;object-fit:contain;object-position:bottom" />`;
+          el.innerHTML = `<img src="./assets/${img}" alt="${el.dataset.alt || 'Thần Tài'}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:bottom" />`;
         }
       };
       document.querySelectorAll('[data-img]').forEach(mountTT);
@@ -417,6 +455,65 @@
         }).join('');
       };
 
+      /* ── ACCUMULATION MINI GAME ── */
+      const renderAccumulation = () => {
+        const currentQuestion = Number(stateCache.currentQuestion) || 0;
+        const question = currentQuestion ? (ACCUMULATION_QUESTIONS[currentQuestion - 1] || null) : null;
+        const result = question && stateCache.accumulationResult && stateCache.accumulationResult.questionId === question.id
+          ? stateCache.accumulationResult
+          : null;
+
+        const pill = document.getElementById('acc-pill');
+        const questionEl = document.getElementById('acc-question');
+        const answerEl = document.getElementById('acc-answer');
+        const rewardEl = document.getElementById('acc-reward');
+        const tagEl = document.getElementById('acc-result-tag');
+        const progressEl = document.getElementById('acc-progress');
+
+        if (!question) {
+          showScreen('screen-leaderboard');
+          renderLeaderboard();
+          return;
+        }
+
+        pill.textContent = `Câu ${question.id} / ${ACCUMULATION_QUESTIONS.length}`;
+        questionEl.textContent = question.question;
+        answerEl.textContent = result ? question.correct : 'Chưa công bố';
+        rewardEl.textContent = result
+          ? `Mỗi đội đúng nhận +${formatNumber(question.reward)} tỷ`
+          : `+${formatNumber(question.reward)} tỷ cho mỗi đội đúng`;
+        tagEl.textContent = result ? 'Đã công bố' : 'Chờ công bố';
+        tagEl.className = result
+          ? 'rounded-full bg-emerald-600/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-emerald-700'
+          : 'rounded-full bg-amber-600/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-700';
+
+        progressEl.innerHTML = TEAM_IDS.map((id) => {
+          const team = teamsCache[id] || {};
+          const teamResult = result ? result.teamResults[id] : null;
+          const answered = result ? !!(teamResult && teamResult.answered) : team.answer != null;
+          const correct = !!(teamResult && teamResult.correct);
+          const answer = result ? (answered ? teamResult.answer : '...') : (team.answer || '...');
+          const status = result ? (answered ? (correct ? 'Đúng' : 'Sai') : 'Chưa trả lời') : (answered ? 'Đã chọn' : '...');
+          const points = result ? (answered ? (correct ? `+${formatNumber(teamResult.points)} tỷ` : '0 tỷ') : '-') : '-';
+          const classes = !answered
+            ? 'border-zinc-200 bg-white text-zinc-500'
+            : correct
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              : 'border-rose-200 bg-rose-50 text-rose-700';
+          const displayName = team.name && team.name !== TEAM_META[id].label ? team.name : TEAM_META[id].label;
+          return `<div class="flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 ${classes}">
+            <div class="min-w-0">
+              <p class="truncate font-display text-[clamp(1.15rem,2.3vw,1.8rem)] font-extrabold uppercase">${displayName}</p>
+              <p class="truncate text-[clamp(0.82rem,1.6vw,1.15rem)] font-medium opacity-80">${answer === '...' ? 'Đang chờ đội gửi đáp án' : `Đáp án: ${answer}`}</p>
+            </div>
+            <div class="shrink-0 text-right">
+              <p class="font-display text-[clamp(0.92rem,1.8vw,1.2rem)] font-extrabold uppercase">${status}</p>
+              <p class="text-[clamp(0.7rem,1vw,0.95rem)] font-semibold uppercase tracking-[0.18em] opacity-75">${points}</p>
+            </div>
+          </div>`;
+        }).join('');
+      };
+
       /* ── SUDDEN DEATH ── */
       let sdTL = null;
       const scrambleEl = document.getElementById('sd-scramble');
@@ -518,11 +615,17 @@
       /* ── ROUTER ── */
       const render = () => {
         const phase = stateCache.currentPhase || PHASES.LOBBY;
-        const _hp = document.getElementById('hud-phase'); if (_hp) _hp.textContent = HUD_PHASE_LABEL[phase] || 'Trực tiếp';
+        const currentQuestion = Number(stateCache.currentQuestion) || 0;
+        const _hp = document.getElementById('hud-phase');
+        if (_hp) _hp.textContent = phase === PHASES.ACCUMULATION && currentQuestion ? `Câu ${currentQuestion} / ${ACCUMULATION_QUESTIONS.length}` : (HUD_PHASE_LABEL[phase] || 'Trực tiếp');
         if (phase !== PHASES.VICTORY) stopRain();
         if (phase !== PHASES.SUDDEN_DEATH) stopSuddenDeath();
         switch (phase) {
           case PHASES.LOBBY: showScreen('screen-lobby'); renderLobby(); break;
+          case PHASES.ACCUMULATION:
+            if (currentQuestion > 0) { showScreen('screen-accumulation'); renderAccumulation(); }
+            else { showScreen('screen-leaderboard'); renderLeaderboard(); }
+            break;
           case PHASES.BLUE_OCEAN: showScreen('screen-market'); renderMarket(); break;
           case PHASES.SUDDEN_DEATH: showScreen('screen-alert'); renderAlert(); break;
           case PHASES.VICTORY: showScreen('screen-victory'); renderVictory(); break;
