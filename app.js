@@ -43,6 +43,7 @@ const PHASES = Object.freeze({
   PHASE_3_CHECK: "PHASE_3_CHECK", // đánh giá: Top1 == Top2 ? → sudden death : victory
   SUDDEN_DEATH: "PHASE_3", // đấu giá mù giữa 2 đội dẫn đầu
   VICTORY: "PHASE_4", // công bố nhà vô địch
+  QA: "PHASE_5", // giải đáp thắc mắc
 });
 
 /** Four fixed teams. Colors are solid Tailwind classes (flat — no gradients). */
@@ -160,6 +161,7 @@ class GameStore {
     this.rootRef = database.ref("/");
     this.stateRef = database.ref("state");
     this.teamsRef = database.ref("teams");
+    this.questionsRef = database.ref("questions");
   }
 
   /* ── Reads ── */
@@ -219,6 +221,7 @@ class GameStore {
         session: firebase.database.ServerValue.TIMESTAMP,
       },
       teams,
+      questions: null,
     });
   }
 
@@ -231,9 +234,31 @@ class GameStore {
     this.teamsRef.on("value", (snap) => cb(snap.val() || {}));
   }
 
+  onQuestions(cb) {
+    this.questionsRef.on("value", (snap) => cb(snap.val() || {}));
+  }
+
+  async addQuestion(teamId, teamName, text) {
+    return this.questionsRef.push({
+      teamId,
+      teamName,
+      text,
+      timestamp: firebase.database.ServerValue.TIMESTAMP,
+    });
+  }
+
+  async deleteQuestion(questionId) {
+    return this.questionsRef.child(questionId).remove();
+  }
+
+  async clearQuestions() {
+    return this.questionsRef.set(null);
+  }
+
   detach() {
     this.stateRef.off();
     this.teamsRef.off();
+    this.questionsRef.off();
   }
 }
 

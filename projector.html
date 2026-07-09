@@ -268,6 +268,29 @@
     <div id="podium" class="absolute inset-x-0 bottom-0 flex items-end"></div>
   </section>
 
+  <!-- ── SCREEN: QA ────────────────────────────────────────────────────── -->
+  <section id="screen-qa" class="screen screen-wrap absolute inset-0 z-10 items-center justify-center px-[4vw] pb-[4vh] pt-[6vh]">
+    <div class="fit flex w-full flex-col gap-[3vh] min-h-[82vh] justify-between">
+      <!-- Header -->
+      <div data-reveal class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-3">
+          <span class="coin3d h-[7vh] w-[7vh] bob"><span class="cin"><span class="coin-face"></span><span class="coin-face back"></span></span></span>
+          <h2 class="fluid-h2 font-display font-extrabold uppercase" style="color:#14110B">Giải đáp thắc mắc</h2>
+        </div>
+        <p class="fluid-label rounded-full border px-4 py-1.5 font-semibold uppercase tracking-[0.2em]" style="background:#FFFFFF;border-color:#E7E3DA;color:#6B6459">Phiên hỏi đáp trực tiếp</p>
+      </div>
+
+      <!-- Main container of questions -->
+      <div data-reveal class="w-full flex-1 rounded-[2.5rem] border p-[4vh] shadow-sm flex flex-col justify-start" style="background:#FFFFFF;border-color:#E7E3DA">
+        <div id="projector-qa-empty" class="flex-1 flex flex-col items-center justify-center gap-4 py-12">
+          <span data-art="bag" class="h-[12vh] w-[12vh] bob"></span>
+          <p class="font-display text-[clamp(1.5rem,3.5vw,3rem)] font-extrabold text-[#A39B8D] uppercase tracking-wide">Đang chờ câu hỏi từ các đội...</p>
+        </div>
+        <div id="projector-qa-list" class="grid grid-cols-1 md:grid-cols-2 gap-[2.5vh] overflow-y-auto max-h-[58vh] pr-2 w-full"></div>
+      </div>
+    </div>
+  </section>
+
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const { store, PHASES, TEAM_IDS, TEAM_META, MARKETS, ACCUMULATION_QUESTIONS, rankTeams, formatNumber } = window.BlueOcean;
@@ -311,9 +334,11 @@
       const HUD_PHASE_LABEL = {
         [PHASES.LOBBY]: 'Sảnh chờ', [PHASES.ACCUMULATION]: 'Tích luỹ vốn', [PHASES.BLUE_OCEAN]: 'Chọn thị trường',
         [PHASES.PHASE_3_CHECK]: 'Đối soát', [PHASES.SUDDEN_DEATH]: 'Đấu thầu sinh tử', [PHASES.VICTORY]: 'Công bố',
+        [PHASES.QA]: 'Giải đáp thắc mắc',
       };
 
       let stateCache = {}, teamsCache = {}, lastScreenId = null;
+      let questionsCache = {};
 
       /* ── background floating coins ── */
       if (!reduceMotion) {
@@ -629,12 +654,49 @@
           case PHASES.BLUE_OCEAN: showScreen('screen-market'); renderMarket(); break;
           case PHASES.SUDDEN_DEATH: showScreen('screen-alert'); renderAlert(); break;
           case PHASES.VICTORY: showScreen('screen-victory'); renderVictory(); break;
+          case PHASES.QA: showScreen('screen-qa'); renderQA(); break;
           default: showScreen('screen-leaderboard'); renderLeaderboard(); break;
         }
       };
 
+      const renderQA = () => {
+        const listEl = document.getElementById('projector-qa-list');
+        const emptyEl = document.getElementById('projector-qa-empty');
+        
+        const qArr = Object.keys(questionsCache || {})
+          .map((key) => ({ id: key, ...questionsCache[key] }))
+          .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        
+        if (qArr.length === 0) {
+          emptyEl.style.display = 'flex';
+          listEl.style.display = 'none';
+          listEl.innerHTML = '';
+          return;
+        }
+        
+        emptyEl.style.display = 'none';
+        listEl.style.display = 'grid';
+        
+        listEl.innerHTML = qArr.map((q, index) => {
+          const isTeam = TEAM_IDS.includes(q.teamId);
+          const bg = isTeam ? TEAM_META[q.teamId].bg : 'bg-slate-700';
+          const label = isTeam ? (teamsCache[q.teamId]?.name || TEAM_META[q.teamId].label) : q.teamName;
+          
+          return `<div class="cq flex flex-col justify-between gap-[1.6vh] overflow-hidden rounded-[1.8rem] border p-[2.5vh] shadow-sm animate-rise" style="background:#FFFFFF;border-color:#E7E3DA">
+            <div class="flex items-center justify-between">
+              <span class="rounded-full px-4 py-1.5 text-[clamp(0.8rem,1.8cqi,1.1rem)] font-black uppercase tracking-[0.2em] text-white ${bg}">${label}</span>
+              <span class="font-mono text-[clamp(0.9rem,2cqi,1.2rem)] font-bold text-[#A39B8D]">#${index + 1}</span>
+            </div>
+            <p class="font-display text-[clamp(1.2rem,2.8cqi,2rem)] font-extrabold text-[#14110B] leading-relaxed break-words mt-1">${q.text}</p>
+          </div>`;
+        }).join('');
+        
+        listEl.scrollTop = listEl.scrollHeight;
+      };
+
       store.onState((s) => { stateCache = s; render(); });
       store.onTeams((t) => { teamsCache = t; render(); });
+      store.onQuestions((q) => { questionsCache = q; renderQA(); });
     });
   </script>
 </body>

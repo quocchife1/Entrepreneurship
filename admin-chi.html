@@ -158,6 +158,46 @@
       </div>
 
     </section>
+
+    <!-- ── Q&A SECTION ──────────────────────────────────────────────────────── -->
+    <section class="grid grid-cols-1 gap-4 lg:grid-cols-3 mt-4">
+      <!-- Q&A List -->
+      <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
+        <div class="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <h2 class="font-mono text-xs font-black uppercase tracking-[0.2em] text-slate-500">Danh sách câu hỏi thắc mắc</h2>
+            <p class="mt-1 text-xs font-medium text-slate-500">Các câu hỏi được hiển thị theo thời gian thực tự động.</p>
+          </div>
+          <span id="qa-count-badge" class="rounded-full bg-blue-600/10 px-3 py-1.5 text-xs font-black uppercase tracking-wide text-blue-700">0 câu hỏi</span>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 max-h-[350px] overflow-y-auto">
+          <div id="admin-qa-list" class="space-y-2">
+            <p class="text-sm font-medium text-slate-500 text-center py-4">Chưa có câu hỏi nào được đặt.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Q&A Admin Manual Input -->
+      <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-1">
+        <h2 class="mb-1 font-mono text-xs font-black uppercase tracking-[0.2em] text-slate-500">Tự nhập câu hỏi (Dự phòng)</h2>
+        <p class="mb-3 text-xs font-medium text-slate-500">Nhập câu hỏi trực tiếp cho đội tuyển khi có sự cố kết nối.</p>
+        
+        <label class="mb-2 flex flex-col gap-1">
+          <span class="text-xs font-bold uppercase tracking-wide text-slate-500">Đội đặt câu hỏi</span>
+          <select id="qa-admin-team" class="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-600">
+            <option value="admin">Ban Tổ Chức (Host)</option>
+          </select>
+        </label>
+        
+        <label class="mb-3 flex flex-col gap-1">
+          <span class="text-xs font-bold uppercase tracking-wide text-slate-500">Nội dung câu hỏi</span>
+          <textarea id="qa-admin-text" rows="3" placeholder="Nhập thắc mắc của đội..." class="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none focus:border-blue-600 resize-none"></textarea>
+        </label>
+        
+        <button id="qa-admin-submit" class="w-full rounded-xl bg-blue-600 py-3 text-sm font-black uppercase tracking-wide text-white transition hover:bg-blue-700 active:scale-95">Gửi câu hỏi</button>
+      </div>
+    </section>
   </main>
 
   <script>
@@ -171,6 +211,7 @@
       let stateCache = {};
       let teamsCache = {};
       let lastScores = {};
+      let questionsCache = {};
 
       const $ = (id) => document.getElementById(id);
 
@@ -200,10 +241,12 @@
         { key: PHASES.BLUE_OCEAN, label: 'Thị trường' },
         { key: PHASES.SUDDEN_DEATH, label: 'Sinh tử' },
         { key: PHASES.VICTORY, label: 'Vô địch' },
+        { key: PHASES.QA, label: 'Giải đáp' },
       ];
       const STEP_INDEX = {
         [PHASES.LOBBY]: 0, [PHASES.ACCUMULATION]: 1, [PHASES.BLUE_OCEAN]: 2,
         [PHASES.PHASE_3_CHECK]: 2, [PHASES.SUDDEN_DEATH]: 3, [PHASES.VICTORY]: 4,
+        [PHASES.QA]: 5,
       };
       const getAccumulationQuestion = (index) => ACCUMULATION_QUESTIONS[Number(index) - 1] || null;
       const revealNow = () => admin.revealAccumulationQuestion();
@@ -218,8 +261,16 @@
           actions: [{ label: 'Xem bảng xếp hạng', kind: 'primary', ok: 'Đã về bảng xếp hạng', run: () => admin.changePhase(PHASES.PHASE_3_CHECK) }] },
         [PHASES.SUDDEN_DEATH]: { hint: 'Hai đội dẫn đầu đặt giá thầu mù trên điện thoại. Chờ cả hai chốt rồi giải.',
           actions: [{ label: 'Giải đấu thầu sinh tử', kind: 'danger', confirm: 'Giải vòng đấu thầu sinh tử? Công bố kết quả cuối cùng.', ok: 'Đã giải sinh tử', run: () => admin.resolveSuddenDeath() }] },
-        [PHASES.VICTORY]: { hint: 'Đã có nhà vô địch. Reset để bắt đầu ván mới.',
-          actions: [{ label: 'Reset ván mới', kind: 'danger', confirm: 'Reset toàn bộ ván chơi? Toàn bộ điểm sẽ về 0.', ok: 'Đã reset ván', run: () => store.resetGame() }] },
+        [PHASES.VICTORY]: { hint: 'Đã có nhà vô địch. Bấm để chuyển sang bước Giải đáp thắc mắc hoặc reset game.',
+          actions: [
+            { label: 'Giải đáp thắc mắc', kind: 'primary', ok: 'Đã chuyển sang Q&A', run: () => admin.changePhase(PHASES.QA) },
+            { label: 'Reset ván mới', kind: 'danger', confirm: 'Reset toàn bộ ván chơi? Toàn bộ điểm sẽ về 0.', ok: 'Đã reset ván', run: () => store.resetGame() }
+          ] },
+        [PHASES.QA]: { hint: 'Đang trong phiên Giải đáp thắc mắc. Đội chơi gửi câu hỏi qua điện thoại, Host/Admin có thể nhập câu hỏi thủ công.',
+          actions: [
+            { label: 'Xóa toàn bộ câu hỏi', kind: 'danger', confirm: 'Xóa toàn bộ câu hỏi đã nhận?', ok: 'Đã xóa câu hỏi', run: () => store.clearQuestions() },
+            { label: 'Reset ván mới', kind: 'danger', confirm: 'Reset toàn bộ ván chơi? Toàn bộ điểm sẽ về 0.', ok: 'Đã reset ván', run: () => store.resetGame() }
+          ] },
       };
       const KIND_CLS = { go: 'bg-emerald-600 hover:bg-emerald-700', primary: 'bg-blue-600 hover:bg-blue-700', danger: 'bg-red-600 hover:bg-red-700' };
 
@@ -447,6 +498,7 @@
           card.querySelector('[data-choice]').textContent = t.choice ? (MARKET_NAME[t.choice] || t.choice) : '-';
           card.querySelector('[data-bid]').textContent = t.bidAmount != null ? formatNumber(t.bidAmount) : '-';
         });
+        populateQaTeams();
       };
 
       /* ── wiring ── */
@@ -489,8 +541,93 @@
       });
 
       buildCards();
+
+      const qaAdminTeam = $('qa-admin-team');
+      const populateQaTeams = () => {
+        const currentSelected = qaAdminTeam.value;
+        qaAdminTeam.innerHTML = `<option value="admin">Ban Tổ Chức (Host)</option>` + 
+          TEAM_IDS.map((id) => {
+            const t = teamsCache[id] || {};
+            const displayName = t.name && t.name !== TEAM_META[id].label ? `${TEAM_META[id].label} (${t.name})` : TEAM_META[id].label;
+            return `<option value="${id}">${displayName}</option>`;
+          }).join('');
+        if (qaAdminTeam.querySelector(`option[value="${currentSelected}"]`)) {
+          qaAdminTeam.value = currentSelected;
+        }
+      };
+
+      const renderQA = () => {
+        const listEl = $('admin-qa-list');
+        const countBadge = $('qa-count-badge');
+        
+        const qArr = Object.keys(questionsCache || {})
+          .map((key) => ({ id: key, ...questionsCache[key] }))
+          .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        
+        countBadge.textContent = `${qArr.length} câu hỏi`;
+        
+        if (qArr.length === 0) {
+          listEl.innerHTML = '<p class="text-sm font-medium text-slate-500 text-center py-4">Chưa có câu hỏi nào được đặt.</p>';
+          return;
+        }
+        
+        listEl.innerHTML = qArr.map((q, index) => {
+          const isTeam = TEAM_IDS.includes(q.teamId);
+          const bg = isTeam ? TEAM_META[q.teamId].bg : 'bg-slate-700';
+          const label = isTeam ? (teamsCache[q.teamId]?.name || TEAM_META[q.teamId].label) : q.teamName;
+          
+          return `<div class="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm animate-rise">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs font-bold text-slate-500">#${index + 1}</span>
+                <span class="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white ${bg}">${label}</span>
+              </div>
+              <p class="mt-1.5 text-sm font-semibold text-slate-800 leading-relaxed">${q.text}</p>
+            </div>
+            <button data-delete-qa="${q.id}" class="shrink-0 rounded-lg border border-slate-200 p-1.5 text-slate-400 hover:border-red-200 hover:text-red-600 transition active:scale-95">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+          </div>`;
+        }).join('');
+      };
+
+      $('admin-qa-list').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-delete-qa]');
+        if (btn) {
+          const id = btn.dataset.deleteQa;
+          if (confirm('Xóa câu hỏi này?')) {
+            run(() => store.deleteQuestion(id), 'Đã xóa câu hỏi');
+          }
+        }
+      });
+
+      $('qa-admin-submit').addEventListener('click', () => {
+        const textInput = $('qa-admin-text');
+        const teamId = qaAdminTeam.value;
+        const text = textInput.value.trim();
+        
+        if (!text) {
+          showToast('Vui lòng nhập nội dung câu hỏi', false);
+          return;
+        }
+        
+        let teamName = "Ban Tổ Chức";
+        if (teamId !== 'admin') {
+          teamName = teamsCache[teamId]?.name || TEAM_META[teamId].label;
+        }
+        
+        run(async () => {
+          await store.addQuestion(teamId, teamName, text);
+          textInput.value = '';
+        }, 'Đã gửi câu hỏi dự phòng');
+      });
+
       store.onState((s) => { stateCache = s; render(); });
       store.onTeams((t) => { teamsCache = t; render(); });
+      store.onQuestions((q) => { questionsCache = q; renderQA(); });
     });
   </script>
 </body>

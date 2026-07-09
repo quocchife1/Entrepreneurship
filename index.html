@@ -201,6 +201,41 @@
       </button>
     </section>
 
+    <!-- ── SCREEN: QA ────────────────────────────────────────────────────── -->
+    <section id="screen-qa" class="screen flex-1 flex-col justify-between gap-4">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <p class="text-xs font-semibold uppercase tracking-[0.2em]" style="color:#6B6459">Giải đáp thắc mắc</p>
+          <p class="font-display text-2xl font-extrabold uppercase tracking-tight" style="color:#14110B">Đặt câu hỏi</p>
+        </div>
+        <div class="flex items-center gap-2 rounded-full border px-3 py-1.5" style="background:#FFFFFF;border-color:#E7E3DA">
+          <span class="h-2.5 w-2.5 rounded-full bg-[#B98A3E] pulse-soft"></span>
+          <span class="text-xs font-semibold uppercase tracking-[0.18em]" style="color:#6B6459">Live</span>
+        </div>
+      </div>
+
+      <!-- Scrollable list of team's questions -->
+      <div class="flex-1 min-h-[220px] max-h-[48dvh] overflow-y-auto rounded-2xl border p-4 space-y-3" style="background:#FFFFFF;border-color:#E7E3DA">
+        <p id="qa-empty-state" class="text-center py-8 text-sm font-medium text-slate-400">Đội chưa đặt câu hỏi nào. Hãy gửi câu hỏi bên dưới!</p>
+        <div id="qa-my-list" class="space-y-3"></div>
+      </div>
+
+      <!-- Input box + Send Button -->
+      <div class="flex flex-col gap-2">
+        <div class="flex gap-2">
+          <input id="qa-input" type="text" placeholder="Nhập thắc mắc của nhóm..."
+                 class="w-full rounded-xl border px-4 py-3 text-sm font-semibold outline-none focus:border-[#B98A3E]"
+                 style="background:#FFFFFF;border-color:#E7E3DA;color:#14110B" />
+          <button id="qa-send-btn"
+                  class="rounded-xl px-5 py-3 text-sm font-display font-extrabold uppercase tracking-widest text-white transition active:scale-95 flex items-center justify-center gap-1.5 shrink-0"
+                  style="background:#B98A3E">
+            Gửi
+          </button>
+        </div>
+        <p class="text-xs text-center font-medium text-slate-400">Nhấn Enter hoặc nút Gửi để đặt câu hỏi cho Host.</p>
+      </div>
+    </section>
+
   </main>
 
   <!-- ── HISTORY PANEL ─────────────────────────────────────────────────────── -->
@@ -350,6 +385,7 @@
       let joined = false, joinedSession = null, lastKey = null;
       let quizInit = false, lastQuizAt = 0, prefilledName = false;
       let lastScore = null, moneyTimer = null, walletInit = false, lastWalletAt = 0;
+      let questionsCache = {};
 
       const $ = (id) => document.getElementById(id);
 
@@ -603,6 +639,13 @@
 
         const activeQuestion = getActiveQuestion();
         if (phase === PHASES.ACCUMULATION && activeQuestion) renderQuiz();
+        if (phase === PHASES.QA) {
+          const isLocked = stateCache.locked === true;
+          $('qa-input').disabled = isLocked;
+          $('qa-send-btn').disabled = isLocked;
+          $('qa-send-btn').style.opacity = isLocked ? '0.5' : '1';
+          renderQA();
+        }
 
         const setWait = (title, gold) => {
           const el = $('wait-title'); el.textContent = title; el.style.color = gold ? '#B98A3E' : '#14110B';
@@ -620,6 +663,7 @@
             else { setWait('Đã bị loại'); showScreen('screen-wait'); }
             break;
           case PHASES.VICTORY: renderFinal(); break;
+          case PHASES.QA: showScreen('screen-qa'); break;
           default: setWait('Đang chờ'); showScreen('screen-wait'); break;
         }
         if (waitTT && phase !== PHASES.VICTORY) {
@@ -638,8 +682,63 @@
         else { if (walletList.parentElement !== walletHome) walletHome.appendChild(walletList); walletModal.style.display = 'none'; }
       };
 
+      const renderQA = () => {
+        const listEl = $('qa-my-list');
+        const emptyState = $('qa-empty-state');
+        
+        // Filter questions by myTeamId
+        const myQuestions = Object.keys(questionsCache || {})
+          .map(key => ({ id: key, ...questionsCache[key] }))
+          .filter(q => q.teamId === myTeamId)
+          .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        
+        if (myQuestions.length === 0) {
+          emptyState.style.display = 'block';
+          listEl.innerHTML = '';
+          return;
+        }
+        
+        emptyState.style.display = 'none';
+        listEl.innerHTML = myQuestions.map((q, index) => {
+          return `<div class="rounded-xl border border-[#E7E3DA] bg-[#F7F5F0]/60 p-3 flex gap-2.5 items-start animate-rise">
+            <span class="rounded bg-[#B98A3E] px-1.5 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider shrink-0 mt-0.5">Câu ${index + 1}</span>
+            <p class="text-sm font-semibold text-[#14110B] leading-relaxed break-words flex-1">${q.text}</p>
+          </div>`;
+        }).join('');
+        
+        // Auto scroll to bottom of Q&A list container
+        const container = listEl.parentElement;
+        container.scrollTop = container.scrollHeight;
+      };
+
+      const qaInput = $('qa-input');
+      const qaSendBtn = $('qa-send-btn');
+      
+      const sendPlayerQuestion = async () => {
+        const text = qaInput.value.trim();
+        if (!text || stateCache.locked === true || !myTeamId) return;
+        
+        const teamName = teamsCache[myTeamId]?.name || TEAM_META[myTeamId].label;
+        
+        try {
+          await store.addQuestion(myTeamId, teamName, text);
+          qaInput.value = '';
+        } catch (e) {
+          console.error(e);
+        }
+      };
+      
+      qaSendBtn.addEventListener('click', sendPlayerQuestion);
+      qaInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          sendPlayerQuestion();
+        }
+      });
+
       store.onState((s) => { stateCache = s; render(); });
       store.onTeams((t) => { teamsCache = t; render(); });
+      store.onQuestions((q) => { questionsCache = q; renderQA(); });
     });
   </script>
 </body>
