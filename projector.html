@@ -682,12 +682,12 @@
           const bg = isTeam ? TEAM_META[q.teamId].bg : 'bg-slate-700';
           const label = isTeam ? (teamsCache[q.teamId]?.name || TEAM_META[q.teamId].label) : q.teamName;
           
-          return `<div class="cq flex flex-col justify-between gap-[1.6vh] overflow-hidden rounded-[1.8rem] border p-[2.5vh] shadow-sm animate-rise" style="background:#FFFFFF;border-color:#E7E3DA">
+          return `<div class="cq flex flex-col justify-between gap-[1.6vh] overflow-hidden min-w-0 rounded-[1.8rem] border p-[2.5vh] shadow-sm animate-rise" style="background:#FFFFFF;border-color:#E7E3DA">
             <div class="flex items-center justify-between">
               <span class="rounded-full px-4 py-1.5 text-[clamp(0.8rem,1.8cqi,1.1rem)] font-black uppercase tracking-[0.2em] text-white ${bg}">${label}</span>
               <span class="font-mono text-[clamp(0.9rem,2cqi,1.2rem)] font-bold text-[#A39B8D]">#${index + 1}</span>
             </div>
-            <p class="font-display text-[clamp(1.2rem,2.8cqi,2rem)] font-extrabold text-[#14110B] leading-relaxed break-words mt-1">${q.text}</p>
+            <p class="font-display text-[clamp(1.2rem,2.8cqi,2rem)] font-extrabold text-[#14110B] leading-relaxed break-words [word-break:break-word] mt-1">${q.text}</p>
           </div>`;
         }).join('');
         
